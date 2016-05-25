@@ -8,7 +8,7 @@ using namespace glm;
 void logic(Display & disp) {
     SDL_Event e;
     SDL_Renderer * r = disp.getRenderer();
-    Cube cb(0, 0, -2, .5, .5, .5);
+    Cube cb(0, 0, -1, 1, 1, 1);
     while (1) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) return ;
