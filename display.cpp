@@ -1,6 +1,6 @@
 #include "display.h"
 
-Display::Display() {
+Display::Display(int w, int h) : width(w), height(h) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         throw "error video";
     }

@@ -2,13 +2,15 @@
 #define PRIMITIVES_H
 
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include "display.h"
 
 struct Line {
-    glm::vec3 start, end;
-    Line(const glm::vec3 & pstart, const glm::vec3 & pend) : start(pstart), end(pend) { }
-    void draw(Display & dpy) {
-        SDL_RenderDrawLine(dpy.getRenderer(), start.x, start.y, end.x, end.y);
+    glm::vec4 start, finish;
+    Line(const glm::vec4 & pstart, const glm::vec4 & pend) : start(pstart), finish(pend) { 
+    }
+    void draw(Display & disp) const {
+        SDL_RenderDrawLine(disp.getRenderer(), start.x, start.y, finish.x, finish.y);
     }
 };
 

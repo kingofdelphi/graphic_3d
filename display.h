@@ -4,12 +4,12 @@
 #include <SDL2/SDL.h>
 
 class Display {
-    const int width = 640;
-    const int height = 480;
+    int width;
+    int height;
     SDL_Window * window;
     SDL_Renderer * renderer;
     public:
-    Display();
+    Display(int w = 640, int h = 480);
     ~Display();
 
     SDL_Renderer * getRenderer() {
@@ -18,6 +18,19 @@ class Display {
 
     SDL_Window * getWindow() {
         return window;
+    }
+
+    float getWidth() const {
+        return width;
+    }
+
+    float getHeight() const {
+        return height;
+    }
+
+    void setWindowSize(int w, int h) {
+        width = w;
+        height = h;
     }
 
 };

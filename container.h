@@ -2,6 +2,7 @@
 #define CONTAINER_H
 
 #include <vector>
+#include "glmdecl.h"
 #include "display.h"
 #include "primitives.h"
 

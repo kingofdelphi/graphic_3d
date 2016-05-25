@@ -1,14 +1,25 @@
-COMP = g++
-LIBS = `pkg-config --libs sdl2`
-CFLAGS = `pkg-config --cflags sdl2` -std=c++11
+CXX = g++
+LDFLAGS = `pkg-config --libs sdl2`
+CXXFLAGS = `pkg-config --cflags sdl2` -std=c++11
+TARGET = glib
 SRCS = main.cpp display.cpp container.cpp
 OBJS = $(SRCS:.cpp=.o)
-TARGET = glib
+DEPS   = $(SRCS:.cpp=.depends)
 
-out: $(OBJS)
-	$(COMP) -o $(TARGET) $(OBJS) $(LIBS)
+.PHONY: clean all
 
-$($(COMP) -M $(SRCS))
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(OBJS) -o $(TARGET)
+
+.cpp.o:
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+%.depends: %.cpp
+	$(CXX) -M $(CXXFLAGS) $< > $@
 
 clean:
-	rm $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(DEPS) $(TARGET)
+
+-include $(DEPS)
