@@ -2,7 +2,7 @@ CXX = g++
 LDFLAGS = `pkg-config --libs sdl2`
 CXXFLAGS = `pkg-config --cflags sdl2` -std=c++11
 TARGET = glib
-SRCS = main.cpp display.cpp container.cpp
+SRCS = main.cpp display.cpp container.cpp primitives.cpp
 OBJS = $(SRCS:.cpp=.o)
 DEPS   = $(SRCS:.cpp=.depends)
 

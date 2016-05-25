@@ -4,6 +4,10 @@
 Container::Container() {
 }
 
+void Container::addMesh(const Mesh & mesh) {
+    meshes.push_back(mesh);
+}
+
 void Container::addLine(const Line & line) {
     lines.push_back(line);
 }
@@ -25,6 +29,18 @@ void Container::render(Display & disp) {
         i.start /= i.start.w;
         i.finish /= i.finish.w;
     }
+
+    for (auto & i : meshes) {
+        float z1 = i.a.z;
+        float z2 = i.b.z;
+        float z3 = i.c.z;
+        i.a = pers * i.a;
+        i.b = pers * i.b;
+        i.c = pers * i.c;
+        i.a /= i.a.w;
+        i.b /= i.b.w;
+        i.c /= i.c.w;
+    }
     //toscreen
     float w = disp.getWidth();
     float h = disp.getHeight();
@@ -38,6 +54,13 @@ void Container::render(Display & disp) {
     for (auto & i : lines) {
         i.start = screen * i.start;
         i.finish = screen * i.finish;
+        i.draw(disp);
+    }
+
+    for (auto & i : meshes) {
+        i.a = screen * i.a;
+        i.b = screen * i.b;
+        i.c = screen * i.c;
         i.draw(disp);
     }
 

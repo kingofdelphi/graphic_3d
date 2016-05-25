@@ -10,9 +10,11 @@ class Container {
     public:
         Container();
         void addLine(const Line & line);
+        void addMesh(const Mesh & mesh);
         void render(Display & disp);
     private:
         std::vector<Line> lines;
+        std::vector<Mesh> meshes;
 };
 
 #endif
