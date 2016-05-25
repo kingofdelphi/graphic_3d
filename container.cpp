@@ -24,22 +24,22 @@ void Container::render(Display & disp) {
                 ));
     //projection
     for (auto & i : lines) {
-        i.start = pers * i.start;
-        i.finish = pers * i.finish;
-        i.start /= i.start.w;
-        i.finish /= i.finish.w;
+        i.start.pos = pers * i.start.pos;
+        i.finish.pos = pers * i.finish.pos;
+        i.start.pos /= i.start.pos.w;
+        i.finish.pos /= i.finish.pos.w;
     }
 
     for (auto & i : meshes) {
-        float z1 = i.a.z;
-        float z2 = i.b.z;
-        float z3 = i.c.z;
-        i.a = pers * i.a;
-        i.b = pers * i.b;
-        i.c = pers * i.c;
-        i.a /= i.a.w;
-        i.b /= i.b.w;
-        i.c /= i.c.w;
+        float z1 = i.a.pos.z;
+        float z2 = i.b.pos.z;
+        float z3 = i.c.pos.z;
+        i.a.pos = pers * i.a.pos;
+        i.b.pos = pers * i.b.pos;
+        i.c.pos = pers * i.c.pos;
+        i.a.pos /= i.a.pos.w;
+        i.b.pos /= i.b.pos.w;
+        i.c.pos /= i.c.pos.w;
     }
     //toscreen
     float w = disp.getWidth();
@@ -52,15 +52,15 @@ void Container::render(Display & disp) {
                 ));
 
     for (auto & i : lines) {
-        i.start = screen * i.start;
-        i.finish = screen * i.finish;
+        i.start.pos = screen * i.start.pos;
+        i.finish.pos = screen * i.finish.pos;
         i.draw(disp);
     }
 
     for (auto & i : meshes) {
-        i.a = screen * i.a;
-        i.b = screen * i.b;
-        i.c = screen * i.c;
+        i.a.pos = screen * i.a.pos;
+        i.b.pos = screen * i.b.pos;
+        i.c.pos = screen * i.c.pos;
         i.draw(disp);
     }
 

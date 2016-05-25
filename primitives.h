@@ -5,13 +5,21 @@
 #include <glm/vec4.hpp>
 #include "display.h"
 #include <iostream>
-#include "color.h"
+
+struct Vertex {
+    glm::vec4 pos;
+    glm::vec3 color;
+    Vertex(const glm::vec4 & vpos, const glm::vec3 & col = glm::vec3(0, 0, 0))
+    : pos(vpos), color(col) {
+    }
+};
+
+#define sign(x) ((x) == 0 ? 1 : ((x) > 0 ? 1 : -1))
 
 struct Line {
-#define sign(x) ((x) == 0 ? 1 : ((x) > 0 ? 1 : -1))
-    glm::vec4 start, finish;
+    Vertex start, finish;
 
-    Line(const glm::vec4 & pstart, const glm::vec4 & pend) : start(pstart), finish(pend) { 
+    Line(const Vertex & va, const Vertex & vb) : start(va), finish(vb) { 
     }
 
     void draw(Display & disp) const;
@@ -19,14 +27,9 @@ struct Line {
 };
 
 struct Mesh {
-    glm::vec4 a, b, c;
-    Color color;
-    Mesh(const glm::vec4 & pa, const glm::vec4 & pb, const glm::vec4 & pc, const Color & col = Color()) 
-        : a(pa), b(pb), c(pc), color(col) { 
-    }
+    Vertex a, b, c;
 
-    void setColor(Color col) {
-        color = col;
+    Mesh(const Vertex & va, const Vertex & vb, const Vertex & vc) : a(va), b(vb), c(vc) {
     }
 
     void draw(Display & disp) const;

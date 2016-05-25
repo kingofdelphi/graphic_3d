@@ -9,6 +9,7 @@
 struct Cube {
     //vertices are in clockwise order
     glm::vec4 verts[8];
+    glm::vec3 colors[8];
     float x, y, z, l, b, h;
     float rot;
     glm::mat4x4 model;
@@ -24,7 +25,13 @@ struct Cube {
             verts[i + 4] = verts[i];
             verts[i + 4].z = -b / 2;
         }
-
+        colors[0] = glm::vec3(1, 1, 1);
+        colors[1] = glm::vec3(0, 1, 0);
+        colors[2] = glm::vec3(1, 1, 1);
+        colors[3] = glm::vec3(0, 1, 1);
+        colors[4] = glm::vec3(0, 0, 0);
+        colors[5] = glm::vec3(1, 0, 0);
+        for (int i = 2; i < 4; ++i) colors[i + 4] = colors[i];
     }
 
     void push(Container & cont) {
@@ -57,14 +64,14 @@ struct Cube {
         //    cont.addLine(Line(a, b));
         //}
 
-        cont.addMesh(Mesh(v[0], v[1], v[2], Color(255, 255, 255)));
-        cont.addMesh(Mesh(v[2], v[3], v[0], Color(255, 255, 255)));
-
-        cont.addMesh(Mesh(v[4], v[5], v[6], Color(0, 255, 0)));
-        cont.addMesh(Mesh(v[6], v[7], v[4], Color(0, 255, 0)));
-
-        cont.addMesh(Mesh(v[3], v[2], v[6], Color(0, 0, 0)));
-        cont.addMesh(Mesh(v[6], v[7], v[3], Color(0, 0, 0)));
+        cont.addMesh(Mesh(Vertex(v[0], colors[0]), Vertex(v[1], colors[1]), Vertex(v[2], colors[2])));
+        cont.addMesh(Mesh(Vertex(v[2], colors[2]), Vertex(v[3], colors[3]), Vertex(v[0], colors[0])));
+                                              
+        cont.addMesh(Mesh(Vertex(v[4], colors[4]), Vertex(v[5], colors[5]), Vertex(v[6], colors[6])));
+        cont.addMesh(Mesh(Vertex(v[6], colors[6]), Vertex(v[7], colors[7]), Vertex(v[4], colors[4])));
+                                             
+        cont.addMesh(Mesh(Vertex(v[3], colors[3]), Vertex(v[2], colors[2]), Vertex(v[6], colors[6])));
+        cont.addMesh(Mesh(Vertex(v[6], colors[6]), Vertex(v[7], colors[7]), Vertex(v[3], colors[3])));
     }
 
     void update() {

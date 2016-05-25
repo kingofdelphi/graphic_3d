@@ -2,8 +2,8 @@
 #define DISPLAY_H
 
 #include <SDL2/SDL.h>
-#include "color.h"
 #include <iostream>
+#include "glmdecl.h"
 
 class Display {
     int width;
@@ -46,11 +46,14 @@ class Display {
         createZBuffer();
     }
 
-    void drawFragment(float x, float y, float z, Color col) {
+    void drawFragment(float x, float y, float z, glm::vec3 color) {
         int X = (int)x, Y = (int)y;
         if (zbuffer[Y][X] > z) {
             zbuffer[(int)Y][(int)X] = z;
-            SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, 0); 
+            color.x *= 255;
+            color.y *= 255;
+            color.z *= 255;
+            SDL_SetRenderDrawColor(renderer, color.x, color.y, color.z, 0); 
             SDL_RenderDrawPoint(renderer, X, Y);
         }
     }
