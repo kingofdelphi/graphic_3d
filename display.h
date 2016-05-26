@@ -16,6 +16,8 @@ class Display {
     ~Display();
 
     void clear() {
+        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 0);
+        SDL_RenderClear(renderer);
         if (zbuffer) {
             for (int i = 0; i < height; ++i) {
                 for (int j = 0; j < width; ++j) {
@@ -53,13 +55,17 @@ class Display {
             color.x *= 255;
             color.y *= 255;
             color.z *= 255;
-            SDL_SetRenderDrawColor(renderer, color.x, color.y, color.z, 0); 
+            SDL_SetRenderDrawColor(renderer, color.x, color.y, color.z, 255); 
             SDL_RenderDrawPoint(renderer, X, Y);
         }
     }
 
     void createZBuffer();
     void freeZBuffer();
+
+    void flush() {
+        SDL_RenderPresent(renderer);
+    }
 
     private:
     void setSize(int w, int h) {

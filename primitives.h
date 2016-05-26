@@ -8,10 +8,28 @@
 
 struct Vertex {
     glm::vec4 pos;
+    glm::vec3 normal;
     glm::vec3 color;
-    Vertex(const glm::vec4 & vpos, const glm::vec3 & col = glm::vec3(0, 0, 0))
-    : pos(vpos), color(col) {
-    }
+    Vertex(
+            const glm::vec4 & vpos, 
+            const glm::vec3 & col = glm::vec3(0, 0, 0),
+            const glm::vec3 & norm = glm::vec3(0, 0, 0) 
+          )
+        : pos(vpos), color(col), normal(norm) {
+        }
+};
+
+struct Light {
+    glm::vec4 pos;
+    glm::vec3 normal;
+    glm::vec3 color;
+    Light(
+            const glm::vec4 & vpos, 
+            const glm::vec3 & col = glm::vec3(0, 0, 0),
+            const glm::vec3 & norm = glm::vec3(0, 0, 0) 
+         )
+        : pos(vpos), color(col), normal(norm) {
+        }
 };
 
 #define sign(x) ((x) == 0 ? 1 : ((x) > 0 ? 1 : -1))
