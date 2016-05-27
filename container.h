@@ -6,27 +6,45 @@
 #include "display.h"
 #include "primitives.h"
 #include "vshader.h"
+#include "fragmentshader.h"
 
 class Container {
     public:
         Container();
+
+        void setDisplay(Display * disp) {
+            display = disp;
+        }
 
         void clear() {
             lines.clear();
             meshes.clear();
         }
 
-        void setVertexShader(const VertexShader & vsh) {
+        void setVertexShader(VertexShader * vsh) {
             vshader = vsh;
         }
 
+        void setFragmentShader(FragmentShader * fsh) {
+            fshader = fsh;
+        }
+
+        Line clipLine(Line line);
         void addLine(const Line & line);
         void addMesh(const Mesh & mesh);
-        void render(Display & disp);
-    private:
+        void flush();
+        void clearRequests() {
+            lines.clear();
+            meshes.clear();
+            vshader->setNormalMatrix(glm::mat4x4(1.0));
+            vshader->setModelMatrix(glm::mat4x4(1.0));
+        }
+    //private:
+        Display * display;
         std::vector<Line> lines;
         std::vector<Mesh> meshes;
-        VertexShader vshader;
+        VertexShader * vshader;
+        FragmentShader * fshader;
 };
 
 #endif

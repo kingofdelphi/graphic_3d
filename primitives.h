@@ -6,13 +6,15 @@
 #include "display.h"
 #include <iostream>
 
+class Container;
+
 struct Vertex {
     glm::vec4 pos;
     glm::vec3 normal;
-    glm::vec3 color;
+    glm::vec4 color;
     Vertex(
             const glm::vec4 & vpos, 
-            const glm::vec3 & col = glm::vec3(0, 0, 0),
+            const glm::vec4 & col = glm::vec4(0, 0, 0, 1),
             const glm::vec3 & norm = glm::vec3(0, 0, 0) 
           )
         : pos(vpos), color(col), normal(norm) {
@@ -22,10 +24,10 @@ struct Vertex {
 struct Light {
     glm::vec4 pos;
     glm::vec3 normal;
-    glm::vec3 color;
+    glm::vec4 color;
     Light(
             const glm::vec4 & vpos, 
-            const glm::vec3 & col = glm::vec3(0, 0, 0),
+            const glm::vec4 & col = glm::vec4(0, 0, 0, 1),
             const glm::vec3 & norm = glm::vec3(0, 0, 0) 
          )
         : pos(vpos), color(col), normal(norm) {
@@ -40,8 +42,7 @@ struct Line {
     Line(const Vertex & va, const Vertex & vb) : start(va), finish(vb) { 
     }
 
-    void draw(Display & disp) const;
-
+    void draw(Container & cont) const;
 };
 
 struct Mesh {
@@ -50,7 +51,7 @@ struct Mesh {
     Mesh(const Vertex & va, const Vertex & vb, const Vertex & vc) : a(va), b(vb), c(vc) {
     }
 
-    void draw(Display & disp) const;
+    void draw(Container & cont) const;
 
 };
 #endif

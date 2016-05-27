@@ -30,3 +30,22 @@ void Display::freeZBuffer() {
     delete [] zbuffer;
     zbuffer = nullptr;
 }
+
+void Display::drawFragment(const Vertex & v) {
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+    float x = v.pos.x, y = v.pos.y, z = v.pos.z;
+    glm::vec4 color = v.color;
+    //color.x = MIN(MAX(0, color.x), 1.0);
+    //color.y = MIN(MAX(0, color.y), 1.0);
+    //color.z = MIN(MAX(0, color.z), 1.0);
+    int X = (int)(round(x)), Y = (int)(round(y));
+    if (zbuffer[Y][X] > z) {
+        zbuffer[Y][X] = z;
+        color.x *= 255;
+        color.y *= 255;
+        color.z *= 255;
+        SDL_SetRenderDrawColor(renderer, color.x, color.y, color.z, 255); 
+        SDL_RenderDrawPoint(renderer, X, Y);
+    }
+}

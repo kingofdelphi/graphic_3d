@@ -3,8 +3,11 @@
 #include "container.h"
 #include "cube.h"
 #include "vshader.h"
+#include "fragmentshader.h"
 #include "primitives.h"
+#include "objloader.h"
 #include <stdio.h>
+
 using namespace glm;
 using namespace std;
 
@@ -20,20 +23,84 @@ mat4x4 getPerspectiveMatrix() {
     return pers;
 }
 
+class GouraudVertexShader : public VertexShader {
+    public:
+        Vertex transform(const Vertex & v) {
+            Vertex r(v);
+            r.pos = tmat * mmodel * r.pos;
+            r.normal = vec3(mnormal * vec4(r.normal, 0));
+            //lighting calculations
+            vec4 color(0, 0, 0, 1.0);
+            for (auto & i : lights) {
+                float f = dot(-i.normal, r.normal);
+                if (f < 0) f = 0;
+                float Cd = 0.6;
+                vec4 scale = i.color * Cd * f;
+                color += scale;
+            }
+            r.color *= color;
+            r.color.x = std::min(std::max(r.color.x, 0.f), 1.f);
+            r.color.y = std::min(std::max(r.color.y, 0.f), 1.f);
+            r.color.z = std::min(std::max(r.color.z, 0.f), 1.f);
+            return r;
+        }
+};
+
+class PassThroughFragmentShader : public FragmentShader {
+    public:
+        Vertex shade(const Vertex & fragment) {
+            return fragment;
+        }
+};
+
+class PhongFragmentShader : public FragmentShader {
+    public:
+        Vertex shade(const Vertex & fragment) {
+            Vertex r(fragment);
+            //lighting calculations
+            glm::vec4 color(0, 0, 0, 1.0);
+            for (auto & i : lights) {
+                float f = dot(-i.normal, r.normal);
+                if (f < 0) f = 0;
+                float Cd = 0.6;
+                vec4 scale = i.color * Cd * f;
+                color += scale;
+            }
+            r.color *= color;
+            r.color.x = std::min(std::max(r.color.x, 0.f), 1.f);
+            r.color.y = std::min(std::max(r.color.y, 0.f), 1.f);
+            r.color.z = std::min(std::max(r.color.z, 0.f), 1.f);
+            return r;
+        }
+};
+
+class MyVertexShader : public VertexShader {
+    public:
+        Vertex transform(const Vertex & v) {
+            Vertex r(v);
+            r.pos = tmat * mmodel * r.pos;
+            return r;
+        }
+};
+
 void logic(Display & disp) {
     SDL_Event e;
-    SDL_Renderer * r = disp.getRenderer();
     Cube cb(0, 0, -1.5, 1, 1, 1);
-    VertexShader vshader;
-    vshader.setTransformMatrix(getPerspectiveMatrix());
+    VertexShader * vshader = new GouraudVertexShader();
+    //VertexShader * vshader = new MyVertexShader();
+    vshader->setTransformMatrix(getPerspectiveMatrix());
+    //FragmentShader * fshader = new PhongFragmentShader();
+    FragmentShader * fshader = new PassThroughFragmentShader();
     Container cont;
+    cont.setDisplay(&disp);
     Light lght(
             glm::vec4(0, 0, 0, 1.0), 
-            glm::vec3(1, 1, 1),
+            glm::vec4(1, 1, 1, 1.0),
             glm::vec3(0, 0, -1) 
             );
-    vshader.addLight(lght);
+    vshader->addLight(lght);
     cont.setVertexShader(vshader);
+    cont.setFragmentShader(fshader);
     while (1) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) return ;
@@ -47,14 +114,18 @@ void logic(Display & disp) {
         }
         //logic
         cb.update();
-        //add objects to the container
-        //clear to remove previously added objects
-        cont.clear();
-        cb.push(cont);
-        //ready for rendering
+        //rendering
         disp.clear();
-        cont.render(disp);
+        //add objects to the container
+        cb.push(cont);
+        cont.flush(); //execute requests
+        //Helper::drawObj(cont, "suzanne.obj");
+        //ready for rendering
+        disp.flush(); //refresh the screen
     }
+
+    delete vshader;
+    delete fshader;
 }
 
 int main(int argc, char ** argv) {

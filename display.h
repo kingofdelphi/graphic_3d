@@ -4,6 +4,9 @@
 #include <SDL2/SDL.h>
 #include <iostream>
 #include "glmdecl.h"
+#include "primitives.h"
+
+class Vertex; //forward declaration (to resolve cyclic header dependencies)
 
 class Display {
     int width;
@@ -16,7 +19,7 @@ class Display {
     ~Display();
 
     void clear() {
-        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 0);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
         if (zbuffer) {
             for (int i = 0; i < height; ++i) {
@@ -48,17 +51,7 @@ class Display {
         createZBuffer();
     }
 
-    void drawFragment(float x, float y, float z, glm::vec3 color) {
-        int X = (int)x, Y = (int)y;
-        if (zbuffer[Y][X] > z) {
-            zbuffer[(int)Y][(int)X] = z;
-            color.x *= 255;
-            color.y *= 255;
-            color.z *= 255;
-            SDL_SetRenderDrawColor(renderer, color.x, color.y, color.z, 255); 
-            SDL_RenderDrawPoint(renderer, X, Y);
-        }
-    }
+    void drawFragment(const Vertex & v);
 
     void createZBuffer();
     void freeZBuffer();

@@ -7,35 +7,45 @@
 #include <iostream>
 
 class VertexShader {
-    private:
+    protected:
         glm::mat4x4 tmat;
+        glm::mat4x4 mnormal;
+        glm::mat4x4 mmodel;
         std::vector<Light> lights;
     public:
+        VertexShader() : mnormal(glm::mat4x4(1)), mmodel(glm::mat4x4(1)) { }
+
+        void clearLights() {
+            lights.clear();
+        }
 
         void addLight(const Light & light) {
             lights.push_back(light);
+        }
+
+        std::vector<Light> getLights() const {
+            return lights;
         }
 
         void setTransformMatrix(const glm::mat4x4 & mat) {
             tmat = mat;
         }
 
-        Vertex transform(const Vertex & v) {
-            Vertex r(v);
-            //lighting calculations
-            glm::vec3 color(0, 0, 0);
-            for (auto & i : lights) {
-                float f = glm::dot(-i.normal, r.normal);
-                if (f < 0) f = 0;
-                float Cd = 0.6;
-                glm::vec3 scale = i.color * Cd *f;
-                color += scale;
-            }
-            r.color *= color;
-            r.pos = tmat * r.pos;
-            r.pos /= r.pos.w;
-            return r;
+        void setNormalMatrix(const glm::mat4x4 & mat) {
+            mnormal = mat;
         }
+
+        void setModelMatrix(const glm::mat4x4 & mat) {
+            mmodel = mat;
+        }
+
+        glm::mat4x4 & getTransformMatrix() {
+            return tmat;
+        }
+
+        virtual Vertex transform(const Vertex & v) = 0;
+
 };
+
 
 #endif
