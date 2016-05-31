@@ -29,15 +29,13 @@ class Container {
             fshader = fsh;
         }
 
-        Line clipLine(Line line);
+        bool clipLine(Line & line);
         void addLine(const Line & line);
         void addMesh(const Mesh & mesh);
         void flush();
         void clearRequests() {
             lines.clear();
             meshes.clear();
-            vshader->setNormalMatrix(glm::mat4x4(1.0));
-            vshader->setModelMatrix(glm::mat4x4(1.0));
         }
     //private:
         Display * display;

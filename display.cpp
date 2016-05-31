@@ -40,7 +40,7 @@ void Display::drawFragment(const Vertex & v) {
     //color.y = MIN(MAX(0, color.y), 1.0);
     //color.z = MIN(MAX(0, color.z), 1.0);
     int X = (int)(round(x)), Y = (int)(round(y));
-    if (zbuffer[Y][X] > z) {
+    if (0 < X && X < width && 0 < Y && Y < height && zbuffer[Y][X] < z) {
         zbuffer[Y][X] = z;
         color.x *= 255;
         color.y *= 255;

@@ -43,7 +43,7 @@ struct Helper {
         }
         for (auto & i : vertnorms) i = glm::normalize(i);
         static float rot = 0;
-        rot += .01;
+        //rot += .01;
         for (int i = 0; i < faces.size(); i += 3) {
             glm::vec4 va = verts[faces[i]];
             glm::vec4 vb = verts[faces[i + 1]];
@@ -64,9 +64,9 @@ struct Helper {
             Vertex x(va, glm::vec4(1, 1, 1, 1), na);
             Vertex y(vb, glm::vec4(1, 1, 1, 1), nb);
             Vertex z(vc, glm::vec4(1, 1, 1, 1), nc);
-            //cont.addLine(Line(x, y));
-            //cont.addLine(Line(y, z));
-            //cont.addLine(Line(z, x));
+            cont.addLine(Line(x, y));
+            cont.addLine(Line(y, z));
+            cont.addLine(Line(z, x));
             cont.addMesh(Mesh(x, y, z));
             cont.flush();
         }

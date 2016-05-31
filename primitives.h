@@ -12,6 +12,7 @@ struct Vertex {
     glm::vec4 pos;
     glm::vec3 normal;
     glm::vec4 color;
+    glm::vec4 old_pos;
     Vertex(
             const glm::vec4 & vpos, 
             const glm::vec4 & col = glm::vec4(0, 0, 0, 1),

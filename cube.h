@@ -112,7 +112,7 @@ struct Cube {
     }
 
     void update() {
-        rot += .02;
+        rot += .05;
     }
 
 };

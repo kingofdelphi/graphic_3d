@@ -61,92 +61,37 @@ void Line::draw(Container & cont) const {
     }
 }
 
-void scanline(Container & cont, const Vertex & a, const Vertex & b) {
-    float z = a.pos.z, dx = b.pos.x - a.pos.x;
-    float fz = (b.pos.z - a.pos.z) / dx;
-    glm::vec4 fcolor = (b.color - a.color) / dx;
-    glm::vec3 fnormal = (b.normal - a.normal) / dx;
-    glm::vec4 color = a.color;
-    glm::vec3 normal = a.normal;
-    for (int j = a.pos.x; j <= b.pos.x; ++j) {
-        Vertex v(glm::vec4(j, a.pos.y, z, 1.0), color, normal);
+void scanline(Container & cont, int y, 
+        int x1, float z1, glm::vec4 ca, glm::vec3 na,
+        int x2, float z2, glm::vec4 cb, glm::vec3 nb
+        ) {
+    int c = abs(x2 - x1) + 1;
+    int x = x1;
+    float z = z1;
+    glm::vec4 color = ca;
+    glm::vec3 normal = na;
+    float dz = z2 - z1;
+    float dx = x2 - x1;
+    int xinc = x1 < x2 ? 1 : -1;
+    glm::vec4 dcolor = cb - ca;
+    //std::cout << dcolor.x << " " << dcolor.y << " " << dcolor.z << "\n";
+    glm::vec3 dnormal = nb - na;
+    float ZF = xinc * dz / dx; 
+    glm::vec4 CF = float(xinc) * dcolor / dx; 
+    glm::vec3 NF = float(xinc) * dnormal / dx; 
+    for (int i = 0; i < c; ++i) {
+        //setpixel(screen, x, y, 0xff0000);
+        Vertex v(glm::vec4(x, y, z, 1.0), color, normal);
         //apply fragment shading
-        v = cont.fshader->shade(v);
+        v = cont.fshader->r_shade(v);
         //screen test
         cont.display->drawFragment(v);
-        z += fz;
-        color += fcolor;
-        normal += fnormal;
+        x += xinc;
+        z += ZF;
+        color += CF;
+        normal += NF;
     }
 }
-
-
-//if upperhalf is true, b.y = c.y else a.y = b.y
-void halfDraw(Container & cont, Mesh mesh, bool upperhalf) {
-    try {
-        if (upperhalf) {
-            if (mesh.b.pos.y != mesh.c.pos.y) throw "wrong triangle, not upperhalf";
-        } else {
-            if (mesh.a.pos.y != mesh.b.pos.y) throw "wrong triangle, not lowerhalf";
-        }
-    } catch (const char * s) {
-        std::cout << "Error: " << s << "\n";
-        throw ;
-    }
-    if (upperhalf) {
-        if (mesh.b.pos.x > mesh.c.pos.x) swap(mesh.b, mesh.c);
-    } else {
-        if (mesh.a.pos.x > mesh.b.pos.x) swap(mesh.a, mesh.b);
-    }
-    SDL_Renderer * renderer = cont.display->getRenderer();
-
-    float lx = mesh.a.pos.x, rx = upperhalf ? mesh.a.pos.x : mesh.b.pos.x;
-    float lz = mesh.a.pos.z, rz = upperhalf ? mesh.a.pos.z : mesh.b.pos.z;
-    glm::vec4 lcolor = mesh.a.color, rcolor = upperhalf ? mesh.a.color : mesh.b.color;
-    glm::vec3 lnormal = mesh.a.normal, rnormal = upperhalf ? mesh.a.normal : mesh.b.normal;
-    //point that a will connect to, for left edge
-    Vertex leftPoint = upperhalf ? mesh.b : mesh.c;
-    //point that c will connect to, for right edge
-    Vertex rightPoint = upperhalf ? mesh.a : mesh.b;
-    glm::vec4 ldpos = leftPoint.pos - mesh.a.pos;
-    glm::vec4 ldcolor = leftPoint.color - mesh.a.color;
-    glm::vec3 ldnormal = leftPoint.normal - mesh.a.normal;
-
-    glm::vec4 rdpos = mesh.c.pos - rightPoint.pos;
-    glm::vec4 rdcolor = mesh.c.color - rightPoint.color;
-    glm::vec3 rdnormal = mesh.c.normal - rightPoint.normal;
-
-    float lxfactor = ldpos.x / ldpos.y;
-    float rxfactor = rdpos.x / rdpos.y;
-
-    float lzfactor = ldpos.z / ldpos.y;
-    float rzfactor = rdpos.z / rdpos.y;
-
-    glm::vec4 lcolfactor = ldcolor / ldpos.y;
-    glm::vec4 rcolfactor = rdcolor / rdpos.y;
-
-    glm::vec3 lnormfactor = ldnormal / ldpos.y;
-    glm::vec3 rnormfactor = rdnormal / rdpos.y;
-
-    for (int i = mesh.a.pos.y; i <= mesh.c.pos.y; ++i) {
-        glm::vec4 lpos(lx, i, lz, 1.0);
-        glm::vec4 rpos(rx, i, rz, 1.0);
-        scanline(cont, Vertex(lpos, lcolor, lnormal), Vertex(rpos, rcolor, rnormal));
-        lx += lxfactor;
-        rx += rxfactor;
-
-        lz += lzfactor;
-        rz += rzfactor;
-
-        lcolor += lcolfactor;
-        rcolor += rcolfactor;
-
-        lnormal += lnormfactor;
-        rnormal += rnormfactor;
-    }
-}
-
-//a.y = b.y
 
 void Mesh::draw(Container & cont) const {
     SDL_Renderer * renderer = cont.display->getRenderer();
@@ -157,33 +102,95 @@ void Mesh::draw(Container & cont) const {
     if (tmp.a.pos.y > tmp.b.pos.y) swap(tmp.a, tmp.b);
     if (tmp.b.pos.y > tmp.c.pos.y) swap(tmp.b, tmp.c);
     if (tmp.a.pos.y > tmp.b.pos.y) swap(tmp.a, tmp.b);
+    float x1 = tmp.a.pos.x, y1 = tmp.a.pos.y, z1 = tmp.a.pos.z;
+    float x2 = tmp.b.pos.x, y2 = tmp.b.pos.y, z2 = tmp.b.pos.z;
+    float x3 = tmp.c.pos.x, y3 = tmp.c.pos.y, z3 = tmp.c.pos.z;
+    glm::vec3 n1 = tmp.a.normal;
+    glm::vec3 n2 = tmp.b.normal;
+    glm::vec3 n3 = tmp.c.normal;
+    glm::vec4 c1 = tmp.a.color;
+    glm::vec4 c2 = tmp.b.color;
+    glm::vec4 c3 = tmp.c.color;
+    float rdy = y3 - y1, rdx = x3 - x1, rdz = z3 - z1;
+    glm::vec4 rdcolor = c3 - c1;
+    glm::vec3 rdnormal = n3 - n1;
 
-    if (tmp.a.pos.y == tmp.c.pos.y) { //a line
-        if (tmp.a.pos.x > tmp.b.pos.x) swap(tmp.a, tmp.b);
-        if (tmp.b.pos.x > tmp.c.pos.x) swap(tmp.b, tmp.c);
-        if (tmp.a.pos.x > tmp.b.pos.x) swap(tmp.a, tmp.b);
-        scanline(cont, tmp.a, tmp.c);
+    float RXF = rdx / rdy; 
+    float RZF = rdz / rdy;
+    glm::vec4 RCF = rdcolor / rdy;
+    glm::vec3 RNF = rdnormal / rdy;
+
+    float rx = x1, rz = z1;
+    glm::vec4 rcol = c1;
+    glm::vec3 rnorm = n1;
+    if (y1 == y3) return ;
+    //top half
+    if (y1 != y2) {
+        float lx = x1;
+        float lz = z1;
+        glm::vec4 lcol = c1;
+        glm::vec3 lnorm = n1;
+        float ldx = x2 - x1, ldy = y2 - y1, ldz = z2 - z1;
+        glm::vec4 ldcolor = c2 - c1;
+        glm::vec3 ldnormal = n2 - n1;
+        float LXF = ldx / ldy;
+        float LZF = ldz / ldy;
+        glm::vec4 LCF = ldcolor / ldy;
+        glm::vec3 LNF = ldnormal / ldy;
+        for (int y = y1; y <= y2; ++y) {
+            scanline(cont, y, lx, lz, lcol, lnorm, rx, rz, rcol, rnorm);
+
+            rx += RXF;
+            rz += RZF;
+            rcol += RCF;
+            rnorm += RNF;
+
+            lx += LXF;
+            lz += LZF;
+            lcol += LCF;
+            lnorm += LNF;
+        }
     }
+    //bottom half
+    if (y2 != y3) {
+        float lx = x2;
+        float lz = z2;
+        glm::vec4 lcol = c2;
+        glm::vec3 lnorm = n2;
 
-    if (tmp.a.pos.y == tmp.b.pos.y) halfDraw(cont, tmp, false);
-    else if (tmp.b.pos.y == tmp.c.pos.y) halfDraw(cont, tmp, true);
-    else {
-        //now interpolate
-        float dx = tmp.c.pos.x - tmp.a.pos.x;
-        float dy = tmp.c.pos.y - tmp.a.pos.y;
-        float dz = tmp.c.pos.z - tmp.a.pos.z;
-        glm::vec4 dcolor = tmp.c.color - tmp.a.color;
-        glm::vec3 dnormal = tmp.c.normal - tmp.a.normal;
-        float factor = (tmp.b.pos.y - tmp.a.pos.y) / dy;
-        float x = tmp.a.pos.x + factor * dx;
-        float y = tmp.b.pos.y;
-        float z = tmp.a.pos.z + factor * dz;
-        glm::vec4 color = tmp.a.color + factor * dcolor;
-        glm::vec3 normal = tmp.a.normal + factor * dnormal;
-        Vertex P(glm::vec4(x, y, z, 1.0), color, normal);
-        Mesh mup(tmp.a, tmp.b, P);
-        Mesh mdown(tmp.b, P, tmp.c);
-        halfDraw(cont, mup, true);
-        halfDraw(cont, mdown, false);
+        float ldx = x3 - x2, ldy = y3 - y2, ldz = z3 - z2;
+        glm::vec4 ldcolor = c3 - c2;
+        glm::vec3 ldnormal = n3 - n2;
+
+        float LXF = ldx / ldy;
+        float LZF = ldz / ldy;
+
+        glm::vec4 LCF = ldcolor / ldy;
+        glm::vec3 LNF = ldnormal / ldy;
+
+        int y = y2;
+
+        if (y1 != y2) {//if top half was rasterized, move ahead one step
+            ++y;
+            lx += LXF;
+            lz += LZF;
+            lcol += LCF;
+            lnorm += LNF;
+        }
+
+        for (; y <= y3; ++y) {
+            scanline(cont, y, lx, lz, lcol, lnorm, rx, rz, rcol, rnorm);
+
+            rx += RXF;
+            rz += RZF;
+            rcol += RCF;
+            rnorm += RNF;
+
+            lx += LXF;
+            lz += LZF;
+            lcol += LCF;
+            lnorm += LNF;
+        }
+
     }
 }

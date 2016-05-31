@@ -1,3 +1,4 @@
 *.vim
 *.depends
 *.o
+*swp
