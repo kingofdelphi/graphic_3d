@@ -19,9 +19,12 @@ class FragmentShader {
         }
 
         Vertex r_shade(Vertex fragment) {
-            fragment.color /= fragment.pos.z;
-            fragment.normal /= fragment.pos.z;
-            fragment.pos.z = 1 / fragment.pos.z;
+            float w = fragment.pos.w;
+            fragment.color /= w;
+            fragment.normal /= w;
+            //temporary
+            fragment.pos.z = -1 / fragment.pos.w;
+            fragment.pos.w = 1.0;
             return shade(fragment);
         }
 

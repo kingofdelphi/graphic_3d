@@ -15,13 +15,13 @@ using namespace std;
 Camera camera;
 
 mat4x4 getPerspectiveMatrix() {
-    return glm::mat4x4(1.0);
+    //return glm::mat4x4(1.0);
     const float l = -1, r = 1, t = 1, b = -1;
     const float n = 1.0, f = 100.0;
     mat4x4 pers = transpose(mat4x4(
                 2 * n / (r - l), 0, (r + l) / (r - l), 0,
                 0, 2 * n / (t - b), (t + b) / (t - b), 0,
-                0, 0, -(f + n) / (f - n), -2 * f * n / (f - n),
+                0, 0, (f + n) / (f - n), -2 * f * n / (f - n),
                 0, 0, -1, 0
                 ));
     return pers;
@@ -31,7 +31,8 @@ class ShadowVertexShader : public VertexShader {
     public:
         Vertex transform(const Vertex & v) {
             Vertex r(v);
-            r.pos = tmat * mview * mmodel * r.pos;
+            r.pos = mview * mmodel * r.pos;
+            r.pos = tmat * r.pos;
             r.normal = vec3(mnormal * vec4(r.normal, 0));
             return r;
         }
@@ -77,7 +78,7 @@ class PhongFragmentShader : public FragmentShader {
                     snormal.z);
             //r.pos.z = 1 / r.pos.z;
             //std::cout << abs(old_pos.z - r.pos.z) << "\n";
-            old_pos.z = r.pos.z;
+            //old_pos.z = r.pos.z;
             old_pos.x = xp * -old_pos.z;
             old_pos.y = yp * -old_pos.z;
             old_pos.w = 1.0;
@@ -94,7 +95,7 @@ class PhongFragmentShader : public FragmentShader {
                 for (int j = -1; j <= 1; ++j) {
                     int AX = X + i, AY = Y + j;
                     if (0 <= AX && AX < width && 0 <= AY && AY < height) {
-                        if (pos.z + .050251 > zbuffer[AY][AX]) notshadow += 1;
+                        if (pos.z + .060252 > zbuffer[AY][AX]) notshadow += 1;
                     }
                 }
             }
@@ -107,7 +108,7 @@ class PhongFragmentShader : public FragmentShader {
                 float f = dot(-i.normal, r.normal);
                 //f = 0.3;
                 if (f < 0) f = 0;
-                float Cd = 0.8;
+                float Cd = 0.3;
                 vec4 scale = i.color * Cd * f;
                 color += notshadow * scale;
             }
@@ -274,7 +275,7 @@ void logic(Display & disp) {
             camera.pos -= delta * camvec;
         }
         //logic
-        cb2.update();
+        //cb2.update();
         //rendering
         glm::mat4x4 mrot = glm::rotate(glm::mat4(1.0), ang, glm::vec3(0, 1, 0));
         glm::vec3 lght_vector(mrot * glm::vec4(0, 0, -1, 0));

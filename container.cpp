@@ -43,15 +43,9 @@ void Container::flush() {
     using namespace glm;
 
     //toscreen
-    float w = display->getWidth();
-    float h = display->getHeight();
+    float width = display->getWidth();
+    float height = display->getHeight();
 
-    mat4x4 screen = transpose(mat4x4(
-                w / 2, 0, 0, w / 2,
-                0, -h / 2, 0, h / 2,
-                0, 0, 1, 0,
-                0, 0, 0, 1
-                ));
     //for (auto & i : lines) {
     //    i.start = vshader->transform(i.start);
     //    i.finish = vshader->transform(i.finish);
@@ -66,7 +60,7 @@ void Container::flush() {
     for (auto & i : vshader->getLights()) {
         fshader->addLight(i);
     }
-    glm::mat4x4 invpers = glm::inverse(vshader->tmat);
+    //glm::mat4x4 invpers = glm::inverse(vshader->tmat);
     glm::mat4x4 invview = glm::inverse(vshader->mview);
     glm::mat4x4 invmodel = glm::inverse(vshader->mmodel);
     for (auto & i : meshes) {
@@ -78,58 +72,40 @@ void Container::flush() {
         i.c = vshader->transform(i.c);
         glm::vec3 n = glm::normalize(glm::cross(vb - va, vc - va));
         fshader->snormal = glm::vec4(n, -glm::dot(n, va));
-        i.a.pos.x /= -i.a.pos.z;
-        i.b.pos.x /= -i.b.pos.z;
-        i.c.pos.x /= -i.c.pos.z;
 
-        i.a.pos.y /= -i.a.pos.z;
-        i.b.pos.y /= -i.b.pos.z;
-        i.c.pos.y /= -i.c.pos.z;
+        float aw = i.a.pos.w;
+        float bw = i.b.pos.w;
+        float cw = i.c.pos.w;
+
+        //move everything from eye space to screen space 
+        i.a.pos /= aw;
+        i.b.pos /= bw;
+        i.c.pos /= cw;
         
-        i.a.color /= i.a.pos.z;
-        i.b.color /= i.b.pos.z;
-        i.c.color /= i.c.pos.z;
+        i.a.color /= aw;
+        i.b.color /= bw;
+        i.c.color /= cw;
 
-        i.a.normal /= i.a.pos.z;
-        i.b.normal /= i.b.pos.z;
-        i.c.normal /= i.c.pos.z;
+        i.a.normal /= aw;
+        i.b.normal /= bw;
+        i.c.normal /= cw;
 
-        i.a.pos.z = 1 / i.a.pos.z;
-        i.b.pos.z = 1 / i.b.pos.z;
-        i.c.pos.z = 1 / i.c.pos.z;
+        i.a.pos.w = 1 / aw;
+        i.b.pos.w = 1 / bw;
+        i.c.pos.w = 1 / cw;
 
-        //i.a.pos.w = i.b.pos.w = i.c.pos.w = 1;
-        //i.a.pos /= i.a.pos.w;
-        //i.b.pos /= i.b.pos.w;
-        //i.c.pos /= i.c.pos.w;
-        i.a.pos = screen * i.a.pos;
-        i.b.pos = screen * i.b.pos;
-        i.c.pos = screen * i.c.pos;
+        auto toscreen = [width, height](vec4 pos) {
+            pos.x = (1 + pos.x) * width * .5;
+            pos.y = (1 - pos.y) * height * .5;
+            return pos;
+        };
+
+        i.a.pos = toscreen(i.a.pos);
+        i.b.pos = toscreen(i.b.pos);
+        i.c.pos = toscreen(i.c.pos);
 
         i.draw(*this);
     }
-
-    //clipping
-    //std::vector<Line> tmp = lines;
-    //lines.clear();
-    //for (auto & i : tmp) {
-    //    bool discard = clipLine(i);
-    //    if (!discard) {
-    //        lines.push_back(i);
-    //    }
-    //}
-
-    //perspective divide
-    //for (auto & i : lines) {
-    //    i.start.pos /= i.start.pos.w;
-    //    i.finish.pos /= i.finish.pos.w;
-    //}
-
-    //for (auto & i : lines) {
-    //    i.start.pos = screen * i.start.pos;
-    //    i.finish.pos = screen * i.finish.pos;
-    //    i.draw(*this);
-    //}
 
     clearRequests();
 
