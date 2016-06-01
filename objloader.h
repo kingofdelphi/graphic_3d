@@ -21,6 +21,10 @@ struct Helper {
             if (ch[0] == 'v') {
                 float a, b, c;
                 f >> a >> b >> c;
+                a *= .25;
+                b *= .25;
+                c *= .25;
+                b -= 0.25;
                 verts.push_back(glm::vec4(a, b, c, 1.0));
             } else if (ch[0] == 'f' ) {
                 int a, b, c;

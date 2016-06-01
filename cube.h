@@ -75,8 +75,9 @@ struct Cube {
         glm::mat4x4 modelmat = model * mrot;
         //glm::mat4x4 normalmat = glm::transpose(glm::inverse(modelmat));
         glm::mat4x4 normalmat = mrot;
-        cont.vshader->setModelMatrix(modelmat);
-        cont.vshader->setNormalMatrix(normalmat);
+        auto & mp = cont.program->uniforms_mat4;
+        mp["mmodel"] = modelmat;
+        mp["mnormal"] = normalmat;
 
         for (int i = 0; i < 4; ++i) {
             int pa = i, pb = (i + 1) & 3;

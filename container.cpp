@@ -2,7 +2,7 @@
 #include <iostream>
 
 Container::Container() 
-    : fshader(nullptr), display(nullptr), vshader(nullptr) {
+    : display(nullptr) {
 }
 
 void Container::addMesh(const Mesh & mesh) {
@@ -37,9 +37,8 @@ bool Container::clipLine(Line & line) {
 }
 
 void Container::flush() {
+    if (program == nullptr) throw "Error: Shader program not specified";
 
-    if (vshader == nullptr) throw "Error: Vertex Shader not specified";
-    if (fshader == nullptr) throw "Error: Fragment Shader not specified";
     using namespace glm;
 
     //toscreen
@@ -54,19 +53,16 @@ void Container::flush() {
     //    i.c.pos /= i.c.pos.w;
 
     //}
-
+    
     //fragment shader
-    fshader->clearLights();
-    for (auto & i : vshader->getLights()) {
-        fshader->addLight(i);
-    }
-    //glm::mat4x4 invpers = glm::inverse(vshader->tmat);
-    glm::mat4x4 invview = glm::inverse(vshader->mview);
-    glm::mat4x4 invmodel = glm::inverse(vshader->mmodel);
+    VertexShader * vshader = program->getVertexShader();
+    FragmentShader * fshader = program->getFragmentShader();
+    auto & unfms = program->uniforms_mat4;
     for (auto & i : meshes) {
-        glm::vec3 va(vshader->mview * vshader->mmodel * i.a.pos);
-        glm::vec3 vb(vshader->mview * vshader->mmodel * i.b.pos);
-        glm::vec3 vc(vshader->mview * vshader->mmodel * i.c.pos);
+        //move this code later**************************************
+        glm::vec3 va(unfms["mview"] * unfms["mmodel"] * i.a.pos);
+        glm::vec3 vb(unfms["mview"] * unfms["mmodel"] * i.b.pos);
+        glm::vec3 vc(unfms["mview"] * unfms["mmodel"] * i.c.pos);
         i.a = vshader->transform(i.a);
         i.b = vshader->transform(i.b);
         i.c = vshader->transform(i.c);

@@ -7,6 +7,7 @@
 #include "primitives.h"
 #include "vshader.h"
 #include "fragmentshader.h"
+#include "shaderprogram.h"
 
 class Container {
     public:
@@ -21,12 +22,8 @@ class Container {
             meshes.clear();
         }
 
-        void setVertexShader(VertexShader * vsh) {
-            vshader = vsh;
-        }
-
-        void setFragmentShader(FragmentShader * fsh) {
-            fshader = fsh;
+        void setProgram(ShaderProgram * prog) {
+            program = prog;
         }
 
         bool clipLine(Line & line);
@@ -41,8 +38,7 @@ class Container {
         Display * display;
         std::vector<Line> lines;
         std::vector<Mesh> meshes;
-        VertexShader * vshader;
-        FragmentShader * fshader;
+        ShaderProgram * program;
 };
 
 #endif

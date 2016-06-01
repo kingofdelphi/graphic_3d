@@ -43,7 +43,7 @@ void Line::draw(Container & cont) const {
     for (int i = 0; i < c; ++i) {
         Vertex v(glm::vec4(x, y, z, 1.0), color, normal);
         //apply fragment shading
-        v = cont.fshader->shade(v);
+        v = cont.program->getFragmentShader()->shade(v);
         //screen test
         cont.display->drawFragment(v);
         delta += inc;
@@ -85,7 +85,7 @@ void scanline(Container & cont, int y,
         //setpixel(screen, x, y, 0xff0000);
         Vertex v(glm::vec4(x, y, z, w), color, normal);
         //apply fragment shading
-        v = cont.fshader->r_shade(v);
+        v = cont.program->getFragmentShader()->r_shade(v);
         //screen test
         cont.display->drawFragment(v);
         x += xinc;

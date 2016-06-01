@@ -4,6 +4,7 @@
 #include "cube.h"
 #include "vshader.h"
 #include "fragmentshader.h"
+#include "shaderprogram.h"
 #include "primitives.h"
 #include "objloader.h"
 #include "camera.h"
@@ -15,7 +16,6 @@ using namespace std;
 Camera camera;
 
 mat4x4 getPerspectiveMatrix() {
-    //return glm::mat4x4(1.0);
     const float l = -1, r = 1, t = 1, b = -1;
     const float n = 1.0, f = 100.0;
     mat4x4 pers = transpose(mat4x4(
@@ -31,9 +31,10 @@ class ShadowVertexShader : public VertexShader {
     public:
         Vertex transform(const Vertex & v) {
             Vertex r(v);
-            r.pos = mview * mmodel * r.pos;
-            r.pos = tmat * r.pos;
-            r.normal = vec3(mnormal * vec4(r.normal, 0));
+            auto & unfms = program->uniforms_mat4;
+            r.pos = unfms["mview"] * unfms["mmodel"] * r.pos;
+            r.pos = unfms["pers"] * r.pos;
+            //r.normal = vec3(unfms["mnormal"] * vec4(r.normal, 0));
             return r;
         }
 };
@@ -44,11 +45,10 @@ class GouraudVertexShader : public VertexShader {
     public:
         Vertex transform(const Vertex & v) {
             Vertex r(v);
-            r.old_pos = mview * mmodel * r.pos; //store previous world position
-            r.pos = tmat * r.old_pos;
-
-            //world normal
-            r.normal = vec3(mnormal * vec4(r.normal, 0));
+            auto & unfms = program->uniforms_mat4;
+            r.pos = unfms["mview"] * unfms["mmodel"] * r.pos;
+            r.pos = unfms["pers"] * r.pos;
+            r.normal = vec3(unfms["mnormal"] * vec4(r.normal, 0));
             return r;
         }
 };
@@ -64,8 +64,6 @@ class PassThroughFragmentShader : public FragmentShader {
 float **zbuffer = nullptr;
 int width, height;
 glm::mat4x4 pers;
-glm::mat4x4 vm;
-glm::mat4x4 invcamera;
 
 class PhongFragmentShader : public FragmentShader {
     public:
@@ -82,7 +80,7 @@ class PhongFragmentShader : public FragmentShader {
             old_pos.x = xp * -old_pos.z;
             old_pos.y = yp * -old_pos.z;
             old_pos.w = 1.0;
-            vec4 pos = invcamera * old_pos;
+            vec4 pos = program->uniforms_mat4["to_light_space"] * old_pos;
             float pz = pos.z;
             pos /= -pz;
             pos.z = pz;
@@ -102,13 +100,12 @@ class PhongFragmentShader : public FragmentShader {
             notshadow /= 9.0;
             glm::vec4 color(0.5, 0.5, 0.5, 1.0);
             r.normal = normalize(r.normal);
-            //color += glm::vec4(0.3, .3, .3, 0);
             //lighting calculations
-            for (auto & i : lights) {
+            for (auto & i : program->lights) {
                 float f = dot(-i.normal, r.normal);
                 //f = 0.3;
                 if (f < 0) f = 0;
-                float Cd = 0.3;
+                float Cd = 0.5;
                 vec4 scale = i.color * Cd * f;
                 color += notshadow * scale;
             }
@@ -147,10 +144,10 @@ Cube cb2(0, -.5/2, -2, .5, .5, .5);
 
 void renderScene(Container & cont) {
     //add objects to the container
-    if (cont.vshader == nullptr) throw "no vertex shader";
-    if (cont.fshader == nullptr) throw "no fragment shader";
-    cont.vshader->setModelMatrix(glm::mat4x4(1.0));
-    cont.vshader->setNormalMatrix(glm::mat4x4(1.0));
+    if (cont.program == nullptr) throw "no vertex shader";
+    auto & unfms = cont.program->uniforms_mat4;
+    unfms["mmodel"] = glm::mat4x4(1.0);
+    unfms["mnormal"] = glm::mat4x4(1.0);
     float gap = 1;
     float span = 10;
     float steps = 10;
@@ -218,9 +215,9 @@ void renderScene(Container & cont) {
     //cont.addMesh(m2);
 
     cont.flush(); //execute requests
-    //Helper::drawObj(cont, "suzanne.obj");
+    Helper::drawObj(cont, "suzanne.obj");
     //cb.push(cont);
-    cb2.push(cont);
+    //cb2.push(cont);
     cont.flush(); //execute requests
 }
 
@@ -228,11 +225,14 @@ void logic(Display & disp) {
     SDL_Event e;
     VertexShader * vshader = new GouraudVertexShader();
     VertexShader * shadow_vshader = new ShadowVertexShader();
-    pers = getPerspectiveMatrix();
-    vshader->setTransformMatrix(pers);
-    shadow_vshader->setTransformMatrix(pers);
     FragmentShader * fshader = new PhongFragmentShader();
     FragmentShader * shadow_fshader = new PassThroughFragmentShader();
+    ShaderProgram scene_program;
+    scene_program.init(vshader, fshader);
+    scene_program.uniforms_mat4["pers"] = getPerspectiveMatrix();
+    ShaderProgram shadow_program;
+    shadow_program.init(shadow_vshader, shadow_fshader);
+    shadow_program.uniforms_mat4["pers"] = getPerspectiveMatrix();
     Container cont;
     cont.setDisplay(&disp);
     float ang = 0;//3.1415 * .5;
@@ -284,26 +284,22 @@ void logic(Display & disp) {
                 glm::vec4(1, 1, 1, 1.0),
                 lght_vector
                 );
-        vshader->clearLights();
-        vshader->addLight(lght);
         disp.clear();
         //render from light's point of view
         light_cam.pos = glm::vec3(0, 1, 1);
         light_cam.yrot = ang; //orient camera in the direction of light
-        vm = pers * light_cam.getViewMatrix();
-        cont.setVertexShader(shadow_vshader);
-        cont.setFragmentShader(shadow_fshader);
-        cont.vshader->setViewMatrix(light_cam.getViewMatrix());
+        cont.setProgram(&shadow_program);
+        shadow_program.uniforms_mat4["mview"] = light_cam.getViewMatrix();
         renderScene(cont);
         if (!vsw) {
+            scene_program.clearLights();
+            scene_program.addLight(lght);
             copyZBuffer(cont);//backup the z buffer
             //render from camera's point of view
             disp.clear();
-            cont.setVertexShader(vshader);
-            cont.setFragmentShader(fshader);
-
-            invcamera = light_cam.getViewMatrix() * glm::inverse(camera.getViewMatrix());
-            cont.vshader->setViewMatrix(camera.getViewMatrix());
+            cont.setProgram(&scene_program);
+            scene_program.uniforms_mat4["mview"] = camera.getViewMatrix();
+            scene_program.uniforms_mat4["to_light_space"] = light_cam.getViewMatrix() * glm::inverse(camera.getViewMatrix());
             renderScene(cont);
             //ready for rendering
         }
