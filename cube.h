@@ -6,19 +6,20 @@
 
 #include <iostream>
 #include <tuple>
+#include <vector>
 
 struct Cube {
     //vertices are in clockwise order
-    glm::vec4 verts[8];
-    glm::vec3 normals[8];
-    glm::vec4 colors[8];
+    std::vector<glm::vec4> verts;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec4> colors;
     float x, y, z, l, b, h;
     float rot;
     glm::mat4x4 model;
     std::vector<std::tuple<int, int, int>> meshes;
     Cube(float cx, float cy, float cz, float cl, float cb, float ch) :
         x(cx), y(cy), z(cz), l(cl), b(cb), h(ch), rot(0) {
-
+            verts.resize(8);
             verts[0] = glm::vec4(-l / 2, -h / 2, b / 2, 1.0);
             verts[1] = glm::vec4(-l / 2, h / 2, b / 2, 1.0);
             verts[2] = glm::vec4(l / 2, h / 2, b / 2, 1.0);
@@ -47,11 +48,13 @@ struct Cube {
             meshes.push_back(std::make_tuple(5, 1, 0));
             meshes.push_back(std::make_tuple(0, 4, 5));
 
+            normals.resize(8);
             for (int i = 0; i < 8; ++i) {
                 glm::vec3 p(verts[i]);
                 normals[i] = glm::normalize(p);
             }
 
+            colors.resize(8);
             colors[0] = glm::vec4(1, 1, 1, 1);
             colors[1] = glm::vec4(1, 1, 1, 1);
             colors[2] = glm::vec4(1, 1, 1, 1);
@@ -60,7 +63,6 @@ struct Cube {
             colors[5] = glm::vec4(1, 1, 1, 1);
             colors[6] = glm::vec4(1, 1, 1, 1);
             colors[7] = glm::vec4(1, 1, 1, 1);
-
         }
 
     void push(Container & cont) {
@@ -73,39 +75,18 @@ struct Cube {
                     ));
 
         glm::mat4x4 modelmat = model * mrot;
-        //glm::mat4x4 normalmat = glm::transpose(glm::inverse(modelmat));
         glm::mat4x4 normalmat = mrot;
         auto & mp = cont.program->uniforms_mat4;
+
         mp["mmodel"] = modelmat;
         mp["mnormal"] = normalmat;
 
-        for (int i = 0; i < 4; ++i) {
-            int pa = i, pb = (i + 1) & 3;
-            Vertex a(verts[pa], colors[pa], normals[pa]);
-            Vertex b(verts[pb], colors[pb], normals[pb]);
-            cont.addLine(Line(a, b));
-        }
-
-        for (int i = 0; i < 4; ++i) {
-            int pa = i, pb = (i + 1) & 3;
-            pa += 4; pb += 4;
-            Vertex a(verts[pa], colors[pa], normals[pa]);
-            Vertex b(verts[pb], colors[pb], normals[pb]);
-            cont.addLine(Line(a, b));
-        }
-
-        for (int i = 0; i < 4; ++i) {
-            int pa = i, pb = i + 4;
-            Vertex a(verts[pa], colors[pa], normals[pa]);
-            Vertex b(verts[pb], colors[pb], normals[pb]);
-            cont.addLine(Line(a, b));
-        }
+        cont.program->attribPointer("position", &verts);
+        cont.program->attribPointer("color", &colors);
+        cont.program->normalAttribPointer(&normals);
 
         for (auto & i : meshes) {
-            int a = std::get<0>(i);
-            int b = std::get<1>(i);
-            int c = std::get<2>(i);
-            cont.addMesh(Mesh(Vertex(verts[a], colors[a], normals[a]), Vertex(verts[b], colors[b], normals[b]), Vertex(verts[c], colors[c], normals[c])));
+            cont.addMesh(i);
         }
 
         cont.flush();

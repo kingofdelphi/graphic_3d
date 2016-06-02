@@ -1,4 +1,4 @@
-CXX = g++ -Ofast
+CXX = g++
 LDFLAGS = `pkg-config --libs sdl2`
 CXXFLAGS = `pkg-config --cflags sdl2` -std=c++11
 TARGET = glib

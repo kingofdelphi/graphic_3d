@@ -1,10 +1,10 @@
 #ifndef PRIMITIVES_H
 #define PRIMITIVES_H
 
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
+#include "glmdecl.h"
 #include "display.h"
 #include <iostream>
+#include <map>
 
 class Container;
 
@@ -13,6 +13,7 @@ struct Vertex {
     glm::vec3 normal;
     glm::vec4 color;
     glm::vec4 old_pos;
+    std::map<std::string, glm::vec4> attributes;
     Vertex(
             const glm::vec4 & vpos, 
             const glm::vec4 & col = glm::vec4(0, 0, 0, 1),
@@ -20,6 +21,13 @@ struct Vertex {
           )
         : pos(vpos), color(col), normal(norm) {
         }
+
+    void addAttribute(std::string s, const glm::vec4 & v) {
+        if (attributes.find(s) != attributes.end()) 
+            throw "attribute name already taken";
+        attributes[s] = v;
+    }
+
 };
 
 struct Light {

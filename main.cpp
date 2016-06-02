@@ -9,11 +9,13 @@
 #include "objloader.h"
 #include "camera.h"
 #include <stdio.h>
+#include <vector>
+#include <tuple>
 
 using namespace glm;
 using namespace std;
 
-Camera camera;
+Camera camera, light_cam;
 
 mat4x4 getPerspectiveMatrix() {
     const float l = -1, r = 1, t = 1, b = -1;
@@ -39,14 +41,14 @@ class ShadowVertexShader : public VertexShader {
         }
 };
 
-Camera light_cam;
-
 class GouraudVertexShader : public VertexShader {
     public:
         Vertex transform(const Vertex & v) {
             Vertex r(v);
             auto & unfms = program->uniforms_mat4;
-            r.pos = unfms["mview"] * unfms["mmodel"] * r.pos;
+            r.pos = unfms["mmodel"] * r.pos;
+            r.old_pos = unfms["world_to_light"] * r.pos;//world space coords to light space homogeneous coords
+            r.pos = unfms["mview"] * r.pos;
             r.pos = unfms["pers"] * r.pos;
             r.normal = vec3(unfms["mnormal"] * vec4(r.normal, 0));
             return r;
@@ -63,7 +65,6 @@ class PassThroughFragmentShader : public FragmentShader {
 
 float **zbuffer = nullptr;
 int width, height;
-glm::mat4x4 pers;
 
 class PhongFragmentShader : public FragmentShader {
     public:
@@ -80,7 +81,7 @@ class PhongFragmentShader : public FragmentShader {
                 for (int j = -1; j <= 1; ++j) {
                     int AX = X + i, AY = Y + j;
                     if (0 <= AX && AX < width && 0 <= AY && AY < height) {
-                        if (pos.z - 0.004398 < zbuffer[AY][AX]) notshadow += 1;
+                        if (pos.z - 0.018398 < zbuffer[AY][AX]) notshadow += 1;
                     }
                 }
             }
@@ -126,9 +127,9 @@ void copyZBuffer(Container & cont) {
     }
 }
 
-Cube cb(-1, 0, -2.5, 1, 1, 1);
+//Cube cb(-1, 0, -2.5, 1, 1, 1);
 Cube cb2(0, -.5/2, -2, .5, .5, .5);
-
+Object obj;
 void renderScene(Container & cont) {
     //add objects to the container
     if (cont.program == nullptr) throw "no vertex shader";
@@ -163,46 +164,37 @@ void renderScene(Container & cont) {
     }
 
     glm::vec3 normal(0, 0, 1);
-    glm::vec4 acolor(0, 1, 0, 1);
-    glm::vec4 bcolor(1, 0, 0, 1);
-    glm::vec4 a(-2, -.5, -1, 1);
-    glm::vec4 b(-2, -.5, -4, 1);
-    glm::vec4 c(2, -.5, -4, 1);
-    glm::vec4 d(2, -.5, -1, 1);
 
-    glm::vec4 e(-.2, -.25, -.5, 1);
-    glm::vec4 f(-.2, .2, -.5, 1);
-    glm::vec4 g(.2, .2, -.5, 1);
-    glm::vec4 h(.2, -.2, -.5, 1);
+    vector<vec4> colors = {
+        glm::vec4(1, 0, 0, 1),
+        glm::vec4(1, 0, 1, 1),
+        glm::vec4(0, 1, 0, 1),
+        glm::vec4(0, 0, 1, 1),
+    };
+    
+    vector<vec3> normals = {
+        glm::vec3(0, 0, 1),
+        glm::vec3(0, 0, 1),
+        glm::vec3(0, 0, 1),
+        glm::vec3(0, 0, 1),
+    };
 
-    Mesh l(Vertex(a, acolor, normal),
-            Vertex(b, bcolor, normal),
-            Vertex(c, acolor, normal)
-          );
+    vector<vec4> vertices = {
+        glm::vec4(-2, -.5, -1, 1),
+        glm::vec4(-2, -.5, -4, 1),
+        glm::vec4(2, -.5, -4, 1),
+        glm::vec4(2, -.5, -1, 1),
+    };
 
-    Mesh r(Vertex(c, acolor, normal),
-            Vertex(d, bcolor, normal),
-            Vertex(a, acolor, normal)
-          );
+    cont.program->attribPointer("position", &vertices);
+    cont.program->attribPointer("color", &colors);
+    cont.program->normalAttribPointer(&normals);
 
-    Mesh m1(Vertex(e, acolor, glm::vec3(0, 0, 1)),
-            Vertex(f, acolor, glm::vec3(0, 0, 1)),
-            Vertex(g, acolor, glm::vec3(0, 0, 1))
-           );
-
-    Mesh m2(Vertex(g, acolor, glm::vec3(0, 0, 1)),
-            Vertex(h, acolor, glm::vec3(0, 0, 1)),
-            Vertex(e, acolor, glm::vec3(0, 0, 1))
-           );
-
-
-    cont.addMesh(l);
-    cont.addMesh(r);
-    //cont.addMesh(m1);
-    //cont.addMesh(m2);
+    cont.addMesh(make_tuple(0, 1, 2));
+    cont.addMesh(make_tuple(2, 3, 0));
 
     cont.flush(); //execute requests
-    Helper::drawObj(cont, "suzanne.obj");
+    obj.draw(cont);
     //cb.push(cont);
     //cb2.push(cont);
     cont.flush(); //execute requests
@@ -223,7 +215,8 @@ void logic(Display & disp) {
     shadow_program.uniforms_mat4["pers"] = pers;
     Container cont;
     cont.setDisplay(&disp);
-    float ang = 0;//3.1415 * .5;
+    obj.load("suzanne.obj");
+    float ang = 0;//3.1415/4;//3.1415 * .5;
     bool vsw = false;
     while (1) {
         while (SDL_PollEvent(&e)) {
@@ -289,7 +282,7 @@ void logic(Display & disp) {
             scene_program.uniforms_mat4["mview"] = camera.getViewMatrix();
             scene_program.uniforms_mat4["to_light_space"] = pers * 
                 light_cam.getViewMatrix() * glm::inverse(camera.getViewMatrix());
-            scene_program.uniforms_mat4["world_to_light"] = light_cam.getViewMatrix();
+            scene_program.uniforms_mat4["world_to_light"] = pers * light_cam.getViewMatrix();
             renderScene(cont);
             //ready for rendering
         }

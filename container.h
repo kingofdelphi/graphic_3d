@@ -2,6 +2,7 @@
 #define CONTAINER_H
 
 #include <vector>
+#include <tuple>
 #include "glmdecl.h"
 #include "display.h"
 #include "primitives.h"
@@ -28,7 +29,7 @@ class Container {
 
         bool clipLine(Line & line);
         void addLine(const Line & line);
-        void addMesh(const Mesh & mesh);
+        void addMesh(const std::tuple<int, int, int> & mesh);
         void flush();
         void clearRequests() {
             lines.clear();
@@ -37,7 +38,7 @@ class Container {
     //private:
         Display * display;
         std::vector<Line> lines;
-        std::vector<Mesh> meshes;
+        std::vector<std::tuple<int, int, int>> meshes;
         ShaderProgram * program;
 };
 

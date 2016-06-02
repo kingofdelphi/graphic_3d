@@ -5,7 +5,7 @@ Container::Container()
     : display(nullptr) {
 }
 
-void Container::addMesh(const Mesh & mesh) {
+void Container::addMesh(const std::tuple<int, int, int> & mesh) {
     meshes.push_back(mesh);
 }
 
@@ -45,62 +45,58 @@ void Container::flush() {
     float width = display->getWidth();
     float height = display->getHeight();
 
-    //for (auto & i : lines) {
-    //    i.start = vshader->transform(i.start);
-    //    i.finish = vshader->transform(i.finish);
-    //    i.a.pos /= i.a.pos.w;
-    //    i.b.pos /= i.b.pos.w;
-    //    i.c.pos /= i.c.pos.w;
-
-    //}
-    
     //fragment shader
     VertexShader * vshader = program->getVertexShader();
     FragmentShader * fshader = program->getFragmentShader();
     auto & unfms = program->uniforms_mat4;
+    if (program->attribute_map.find("position") == program->attribute_map.end()) {
+        std::cout << "no position specified";
+        throw ;
+    }
     for (auto & i : meshes) {
-        //move this code later**************************************
-        glm::vec3 va(unfms["mview"] * unfms["mmodel"] * i.a.pos);
-        glm::vec3 vb(unfms["mview"] * unfms["mmodel"] * i.b.pos);
-        glm::vec3 vc(unfms["mview"] * unfms["mmodel"] * i.c.pos);
+        int p = std::get<0>(i);
+        int q = std::get<1>(i);
+        int r = std::get<2>(i);
+        auto & amap = program->attribute_map;
+        Vertex a(amap["position"]->at(p));
+        Vertex b(amap["position"]->at(q));
+        Vertex c(amap["position"]->at(r));
+        a.color = amap["color"]->at(p);
+        b.color = amap["color"]->at(q);
+        c.color = amap["color"]->at(r);
 
-        glm::vec4 la(unfms["pers"] * unfms["world_to_light"] * unfms["mmodel"] * i.a.pos);
-        glm::vec4 lb(unfms["pers"] * unfms["world_to_light"] * unfms["mmodel"] * i.b.pos);
-        glm::vec4 lc(unfms["pers"] * unfms["world_to_light"] * unfms["mmodel"] * i.c.pos);
+        a.normal = program->np->at(p);
+        b.normal = program->np->at(q);
+        c.normal = program->np->at(r);
 
-        i.a = vshader->transform(i.a);
-        i.b = vshader->transform(i.b);
-        i.c = vshader->transform(i.c);
-        i.a.old_pos = la;
-        i.b.old_pos = lb;
-        i.c.old_pos = lc;
-        glm::vec3 n = glm::normalize(glm::cross(vb - va, vc - va));
-        fshader->snormal = glm::vec4(n, -glm::dot(n, va));
+        a = vshader->transform(a);
+        b = vshader->transform(b);
+        c = vshader->transform(c);
 
-        float aw = i.a.pos.w;
-        float bw = i.b.pos.w;
-        float cw = i.c.pos.w;
+        float aw = a.pos.w;
+        float bw = b.pos.w;
+        float cw = c.pos.w;
 
         //move everything from eye space to screen space 
-        i.a.pos /= aw;
-        i.b.pos /= bw;
-        i.c.pos /= cw;
+        a.pos /= aw;
+        b.pos /= bw;
+        c.pos /= cw;
         
-        i.a.old_pos /= aw;
-        i.b.old_pos /= bw;
-        i.c.old_pos /= cw;
+        a.old_pos /= aw;
+        b.old_pos /= bw;
+        c.old_pos /= cw;
 
-        i.a.color /= aw;
-        i.b.color /= bw;
-        i.c.color /= cw;
+        a.color /= aw;
+        b.color /= bw;
+        c.color /= cw;
 
-        i.a.normal /= aw;
-        i.b.normal /= bw;
-        i.c.normal /= cw;
+        a.normal /= aw;
+        b.normal /= bw;
+        c.normal /= cw;
 
-        i.a.pos.w = 1 / aw;
-        i.b.pos.w = 1 / bw;
-        i.c.pos.w = 1 / cw;
+        a.pos.w = 1 / aw;
+        b.pos.w = 1 / bw;
+        c.pos.w = 1 / cw;
 
         auto toscreen = [width, height](vec4 pos) {
             pos.x = (1 + pos.x) * width * .5;
@@ -108,11 +104,11 @@ void Container::flush() {
             return pos;
         };
 
-        i.a.pos = toscreen(i.a.pos);
-        i.b.pos = toscreen(i.b.pos);
-        i.c.pos = toscreen(i.c.pos);
-
-        i.draw(*this);
+        a.pos = toscreen(a.pos);
+        b.pos = toscreen(b.pos);
+        c.pos = toscreen(c.pos);
+        Mesh m(a, b, c);
+        m.draw(*this);
     }
 
     clearRequests();
