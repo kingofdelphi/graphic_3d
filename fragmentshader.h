@@ -16,8 +16,7 @@ class FragmentShader {
             float w = fragment.pos.w;
             fragment.color /= w;
             fragment.normal /= w;
-            //temporary
-            fragment.pos.z = -1 / fragment.pos.w;
+            fragment.old_pos /= w;
             fragment.pos.w = 1.0;
             return shade(fragment);
         }

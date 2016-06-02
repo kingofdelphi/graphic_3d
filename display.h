@@ -24,7 +24,7 @@ class Display {
         if (zbuffer) {
             for (int i = 0; i < height; ++i) {
                 for (int j = 0; j < width; ++j) {
-                    zbuffer[i][j] = -1e100;
+                    zbuffer[i][j] = 1e100;
                 }
             }
         }

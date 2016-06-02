@@ -63,9 +63,17 @@ void Container::flush() {
         glm::vec3 va(unfms["mview"] * unfms["mmodel"] * i.a.pos);
         glm::vec3 vb(unfms["mview"] * unfms["mmodel"] * i.b.pos);
         glm::vec3 vc(unfms["mview"] * unfms["mmodel"] * i.c.pos);
+
+        glm::vec4 la(unfms["pers"] * unfms["world_to_light"] * unfms["mmodel"] * i.a.pos);
+        glm::vec4 lb(unfms["pers"] * unfms["world_to_light"] * unfms["mmodel"] * i.b.pos);
+        glm::vec4 lc(unfms["pers"] * unfms["world_to_light"] * unfms["mmodel"] * i.c.pos);
+
         i.a = vshader->transform(i.a);
         i.b = vshader->transform(i.b);
         i.c = vshader->transform(i.c);
+        i.a.old_pos = la;
+        i.b.old_pos = lb;
+        i.c.old_pos = lc;
         glm::vec3 n = glm::normalize(glm::cross(vb - va, vc - va));
         fshader->snormal = glm::vec4(n, -glm::dot(n, va));
 
@@ -78,6 +86,10 @@ void Container::flush() {
         i.b.pos /= bw;
         i.c.pos /= cw;
         
+        i.a.old_pos /= aw;
+        i.b.old_pos /= bw;
+        i.c.old_pos /= cw;
+
         i.a.color /= aw;
         i.b.color /= bw;
         i.c.color /= cw;

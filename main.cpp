@@ -69,21 +69,8 @@ class PhongFragmentShader : public FragmentShader {
     public:
         Vertex shade(const Vertex & fragment) {
             Vertex r(fragment);
-            vec4 old_pos;
-            float xp = r.pos.x * 2.0 / width - 1;
-            float yp = 1 - r.pos.y * 2.0 / height;
-            old_pos.z = snormal.w / (snormal.x * xp + snormal.y * yp -
-                    snormal.z);
-            //r.pos.z = 1 / r.pos.z;
-            //std::cout << abs(old_pos.z - r.pos.z) << "\n";
-            //old_pos.z = r.pos.z;
-            old_pos.x = xp * -old_pos.z;
-            old_pos.y = yp * -old_pos.z;
-            old_pos.w = 1.0;
-            vec4 pos = program->uniforms_mat4["to_light_space"] * old_pos;
-            float pz = pos.z;
-            pos /= -pz;
-            pos.z = pz;
+            vec4 pos = r.old_pos;
+            pos /= pos.w;
             pos.x = width * (1 + pos.x) * 0.5;
             pos.y = height * (1 - pos.y) * 0.5;
             float notshadow = 0;
@@ -93,7 +80,7 @@ class PhongFragmentShader : public FragmentShader {
                 for (int j = -1; j <= 1; ++j) {
                     int AX = X + i, AY = Y + j;
                     if (0 <= AX && AX < width && 0 <= AY && AY < height) {
-                        if (pos.z + .060252 > zbuffer[AY][AX]) notshadow += 1;
+                        if (pos.z - 0.004398 < zbuffer[AY][AX]) notshadow += 1;
                     }
                 }
             }
@@ -229,10 +216,11 @@ void logic(Display & disp) {
     FragmentShader * shadow_fshader = new PassThroughFragmentShader();
     ShaderProgram scene_program;
     scene_program.init(vshader, fshader);
-    scene_program.uniforms_mat4["pers"] = getPerspectiveMatrix();
+    glm::mat4x4 pers = getPerspectiveMatrix();
+    scene_program.uniforms_mat4["pers"] = pers;
     ShaderProgram shadow_program;
     shadow_program.init(shadow_vshader, shadow_fshader);
-    shadow_program.uniforms_mat4["pers"] = getPerspectiveMatrix();
+    shadow_program.uniforms_mat4["pers"] = pers;
     Container cont;
     cont.setDisplay(&disp);
     float ang = 0;//3.1415 * .5;
@@ -299,7 +287,9 @@ void logic(Display & disp) {
             disp.clear();
             cont.setProgram(&scene_program);
             scene_program.uniforms_mat4["mview"] = camera.getViewMatrix();
-            scene_program.uniforms_mat4["to_light_space"] = light_cam.getViewMatrix() * glm::inverse(camera.getViewMatrix());
+            scene_program.uniforms_mat4["to_light_space"] = pers * 
+                light_cam.getViewMatrix() * glm::inverse(camera.getViewMatrix());
+            scene_program.uniforms_mat4["world_to_light"] = light_cam.getViewMatrix();
             renderScene(cont);
             //ready for rendering
         }
