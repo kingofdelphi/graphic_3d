@@ -34,8 +34,8 @@ void Display::freeZBuffer() {
 void Display::drawFragment(const Vertex & v) {
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-    float x = v.pos.x, y = v.pos.y, z = v.pos.z;
-    glm::vec4 color = v.color;
+    float x = v["position"].x, y = v["position"].y, z = v["position"].z;
+    glm::vec4 color = v["color"];
     //color.x = MIN(MAX(0, color.x), 1.0);
     //color.y = MIN(MAX(0, color.y), 1.0);
     //color.z = MIN(MAX(0, color.z), 1.0);

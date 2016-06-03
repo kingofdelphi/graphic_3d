@@ -11,7 +11,7 @@
 struct Cube {
     //vertices are in clockwise order
     std::vector<glm::vec4> verts;
-    std::vector<glm::vec3> normals;
+    std::vector<glm::vec4> normals;
     std::vector<glm::vec4> colors;
     float x, y, z, l, b, h;
     float rot;
@@ -51,7 +51,7 @@ struct Cube {
             normals.resize(8);
             for (int i = 0; i < 8; ++i) {
                 glm::vec3 p(verts[i]);
-                normals[i] = glm::normalize(p);
+                normals[i] = glm::vec4(glm::normalize(p), 0);
             }
 
             colors.resize(8);
@@ -83,7 +83,7 @@ struct Cube {
 
         cont.program->attribPointer("position", &verts);
         cont.program->attribPointer("color", &colors);
-        cont.program->normalAttribPointer(&normals);
+        cont.program->attribPointer("normal", &normals);
 
         for (auto & i : meshes) {
             cont.addMesh(i);

@@ -8,7 +8,6 @@
 #include "primitives.h"
 #include "objloader.h"
 #include "camera.h"
-#include <stdio.h>
 #include <vector>
 #include <tuple>
 
@@ -34,9 +33,8 @@ class ShadowVertexShader : public VertexShader {
         Vertex transform(const Vertex & v) {
             Vertex r(v);
             auto & unfms = program->uniforms_mat4;
-            r.pos = unfms["mview"] * unfms["mmodel"] * r.pos;
-            r.pos = unfms["pers"] * r.pos;
-            //r.normal = vec3(unfms["mnormal"] * vec4(r.normal, 0));
+            r["position"] = unfms["mview"] * unfms["mmodel"] * r["position"];
+            r["position"] = unfms["pers"] * r["position"];
             return r;
         }
 };
@@ -46,11 +44,11 @@ class GouraudVertexShader : public VertexShader {
         Vertex transform(const Vertex & v) {
             Vertex r(v);
             auto & unfms = program->uniforms_mat4;
-            r.pos = unfms["mmodel"] * r.pos;
-            r.old_pos = unfms["world_to_light"] * r.pos;//world space coords to light space homogeneous coords
-            r.pos = unfms["mview"] * r.pos;
-            r.pos = unfms["pers"] * r.pos;
-            r.normal = vec3(unfms["mnormal"] * vec4(r.normal, 0));
+            r["position"] = unfms["mmodel"] * r["position"];
+            r["old_pos"] = unfms["world_to_light"] * r["position"];//world space coords to light space homogeneous coords
+            r["position"] = unfms["mview"] * r["position"];
+            r["position"] = unfms["pers"] * r["position"];
+            r["normal"] = unfms["mnormal"] * r["normal"];
             return r;
         }
 };
@@ -70,7 +68,7 @@ class PhongFragmentShader : public FragmentShader {
     public:
         Vertex shade(const Vertex & fragment) {
             Vertex r(fragment);
-            vec4 pos = r.old_pos;
+            vec4 pos = r["old_pos"];
             pos /= pos.w;
             pos.x = width * (1 + pos.x) * 0.5;
             pos.y = height * (1 - pos.y) * 0.5;
@@ -81,26 +79,26 @@ class PhongFragmentShader : public FragmentShader {
                 for (int j = -1; j <= 1; ++j) {
                     int AX = X + i, AY = Y + j;
                     if (0 <= AX && AX < width && 0 <= AY && AY < height) {
-                        if (pos.z - 0.018398 < zbuffer[AY][AX]) notshadow += 1;
+                        if (pos.z - 0.024398 < zbuffer[AY][AX]) notshadow += 1;
                     }
                 }
             }
             notshadow /= 9.0;
             glm::vec4 color(0.5, 0.5, 0.5, 1.0);
-            r.normal = normalize(r.normal);
+            glm::vec3 N = normalize(vec3(r["normal"]));
             //lighting calculations
             for (auto & i : program->lights) {
-                float f = dot(-i.normal, r.normal);
+                float f = dot(-i.normal, N);
                 //f = 0.3;
                 if (f < 0) f = 0;
                 float Cd = 0.5;
                 vec4 scale = i.color * Cd * f;
                 color += notshadow * scale;
             }
-            r.color *= color;
-            r.color.x = std::min(std::max(r.color.x, 0.f), 1.f);
-            r.color.y = std::min(std::max(r.color.y, 0.f), 1.f);
-            r.color.z = std::min(std::max(r.color.z, 0.f), 1.f);
+            r["color"] *= color;
+            r["color"].x = std::min(std::max(r["color"].x, 0.f), 1.f);
+            r["color"].y = std::min(std::max(r["color"].y, 0.f), 1.f);
+            r["color"].z = std::min(std::max(r["color"].z, 0.f), 1.f);
             return r;
         }
 };
@@ -145,9 +143,7 @@ void renderScene(Container & cont) {
         glm::vec4 b(i * gap, -.5, -span, 1);
         glm::vec4 acolor(1, 0, 0, 1);
         glm::vec4 bcolor(1, 1, 1, 1);
-        Line l(Vertex(a, acolor, normal),
-                Vertex(b, bcolor, normal)
-              );
+        Line l(Vertex(a), Vertex(b));
         //cont.addLine(l);
     }
 
@@ -157,9 +153,7 @@ void renderScene(Container & cont) {
         glm::vec4 b(span, -.5, i * gap, 1);
         glm::vec4 acolor(0, 1, 0, 1);
         glm::vec4 bcolor(1, 0, 1, 1);
-        Line l(Vertex(a, acolor, normal),
-                Vertex(b, bcolor, normal)
-              );
+        Line l(Vertex(a), Vertex(b));
         //cont.addLine(l);
     }
 
@@ -171,12 +165,12 @@ void renderScene(Container & cont) {
         glm::vec4(0, 1, 0, 1),
         glm::vec4(0, 0, 1, 1),
     };
-    
-    vector<vec3> normals = {
-        glm::vec3(0, 0, 1),
-        glm::vec3(0, 0, 1),
-        glm::vec3(0, 0, 1),
-        glm::vec3(0, 0, 1),
+
+    vector<vec4> normals = {
+        glm::vec4(0, 0, 1, 0),
+        glm::vec4(0, 0, 1, 0),
+        glm::vec4(0, 0, 1, 0),
+        glm::vec4(0, 0, 1, 0),
     };
 
     vector<vec4> vertices = {
@@ -188,15 +182,15 @@ void renderScene(Container & cont) {
 
     cont.program->attribPointer("position", &vertices);
     cont.program->attribPointer("color", &colors);
-    cont.program->normalAttribPointer(&normals);
+    cont.program->attribPointer("normal", &normals);
 
     cont.addMesh(make_tuple(0, 1, 2));
     cont.addMesh(make_tuple(2, 3, 0));
 
     cont.flush(); //execute requests
-    obj.draw(cont);
+    //obj.draw(cont);
     //cb.push(cont);
-    //cb2.push(cont);
+    cb2.push(cont);
     cont.flush(); //execute requests
 }
 

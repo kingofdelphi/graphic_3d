@@ -14,26 +14,26 @@ void Container::addLine(const Line & line) {
 }
 
 bool Container::clipLine(Line & line) {
-    if (line.start.pos.w > line.finish.pos.w) 
-        std::swap(line.start, line.finish);
-    static const float z_clip = -1;
-    //both endpoints are behind the clip plane 
-    if (line.finish.pos.z < z_clip * line.finish.pos.w) return true;
-    //both endpoints are at front the clip plane 
-    if (line.start.pos.z >= z_clip * line.start.pos.w) return false;
-    //need to clip
-    //now interpolate
-    glm::vec4 delta = line.finish.pos - line.start.pos;
-    glm::vec4 dcolor = line.finish.color - line.start.color;
-    glm::vec3 dnormal = line.finish.normal - line.start.normal;
-    float K = delta.z / delta.w;
-    assert(z_clip != K);
-    float w = (line.start.pos.z - K * line.start.pos.w) / (z_clip - K);
-    float factor = (w - line.start.pos.w) / delta.w;
-    line.start.pos += factor * delta;
-    line.start.color += factor * dcolor;
-    line.start.normal += factor * dnormal;
-    return false;
+//    if (line.start.pos.w > line.finish.pos.w) 
+//        std::swap(line.start, line.finish);
+//    static const float z_clip = -1;
+//    //both endpoints are behind the clip plane 
+//    if (line.finish.pos.z < z_clip * line.finish.pos.w) return true;
+//    //both endpoints are at front the clip plane 
+//    if (line.start.pos.z >= z_clip * line.start.pos.w) return false;
+//    //need to clip
+//    //now interpolate
+//    glm::vec4 delta = line.finish.pos - line.start.pos;
+//    glm::vec4 dcolor = line.finish.color - line.start.color;
+//    glm::vec3 dnormal = line.finish.normal - line.start.normal;
+//    float K = delta.z / delta.w;
+//    assert(z_clip != K);
+//    float w = (line.start.pos.z - K * line.start.pos.w) / (z_clip - K);
+//    float factor = (w - line.start.pos.w) / delta.w;
+//    line.start.pos += factor * delta;
+//    line.start.color += factor * dcolor;
+//    line.start.normal += factor * dnormal;
+//    return false;
 }
 
 void Container::flush() {
@@ -58,45 +58,33 @@ void Container::flush() {
         int q = std::get<1>(i);
         int r = std::get<2>(i);
         auto & amap = program->attribute_map;
-        Vertex a(amap["position"]->at(p));
-        Vertex b(amap["position"]->at(q));
-        Vertex c(amap["position"]->at(r));
-        a.color = amap["color"]->at(p);
-        b.color = amap["color"]->at(q);
-        c.color = amap["color"]->at(r);
 
-        a.normal = program->np->at(p);
-        b.normal = program->np->at(q);
-        c.normal = program->np->at(r);
+        Vertex a, b, c;
+        for (auto & i : program->attribute_map) {
+            a.addAttribute(i.first, amap[i.first]->at(p));
+            b.addAttribute(i.first, amap[i.first]->at(q));
+            c.addAttribute(i.first, amap[i.first]->at(r));
+        }
 
         a = vshader->transform(a);
         b = vshader->transform(b);
         c = vshader->transform(c);
 
-        float aw = a.pos.w;
-        float bw = b.pos.w;
-        float cw = c.pos.w;
+        float aw = a["position"].w;
+        float bw = b["position"].w;
+        float cw = c["position"].w;
 
         //move everything from eye space to screen space 
-        a.pos /= aw;
-        b.pos /= bw;
-        c.pos /= cw;
+        for (auto & j : a.attributes) {
+            std::string k = j.first;
+            a[k] /= aw;
+            b[k] /= bw;
+            c[k] /= cw;
+        }
         
-        a.old_pos /= aw;
-        b.old_pos /= bw;
-        c.old_pos /= cw;
-
-        a.color /= aw;
-        b.color /= bw;
-        c.color /= cw;
-
-        a.normal /= aw;
-        b.normal /= bw;
-        c.normal /= cw;
-
-        a.pos.w = 1 / aw;
-        b.pos.w = 1 / bw;
-        c.pos.w = 1 / cw;
+        a["position"].w = 1 / aw;
+        b["position"].w = 1 / bw;
+        c["position"].w = 1 / cw;
 
         auto toscreen = [width, height](vec4 pos) {
             pos.x = (1 + pos.x) * width * .5;
@@ -104,9 +92,10 @@ void Container::flush() {
             return pos;
         };
 
-        a.pos = toscreen(a.pos);
-        b.pos = toscreen(b.pos);
-        c.pos = toscreen(c.pos);
+        a["position"] = toscreen(a["position"]);
+        b["position"] = toscreen(b["position"]);
+        c["position"] = toscreen(c["position"]);
+
         Mesh m(a, b, c);
         m.draw(*this);
     }

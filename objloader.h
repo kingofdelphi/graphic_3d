@@ -13,7 +13,7 @@ struct Object {
     std::vector<glm::vec4> verts;
     std::vector<glm::vec4> colors;
     std::vector<std::tuple<int, int, int>> meshes;
-    std::vector<glm::vec3> normals;
+    std::vector<glm::vec4> normals;
     float rot;
     Object() : rot(0) { }
     void draw(Container & cont) {
@@ -27,11 +27,12 @@ struct Object {
                     ));
         glm::mat4x4 mrot = glm::rotate(glm::mat4(1.0), rot, glm::vec3(0, 1, 0));
         mp["mmodel"] = model * mrot;
-        mp["mnormal"] = glm::mat4x4(1.0);
+        mp["mnormal"] = mrot * glm::mat4x4(1.0);
 
         cont.program->attribPointer("position", &verts);
         cont.program->attribPointer("color", &colors);
-        cont.program->normalAttribPointer(&normals);
+        cont.program->attribPointer("normal", &normals);
+
         for (auto & i : meshes) cont.addMesh(i);
         cont.flush();
     }
@@ -62,12 +63,12 @@ struct Object {
                 meshes.push_back(std::make_tuple(a, b, c));
             }
         }
-        normals.resize(verts.size(), glm::vec3(0, 0, 0));
+        normals.resize(verts.size(), glm::vec4(0, 0, 0, 0));
         for (int i = 0; i < faces.size(); i += 3) {
             glm::vec3 pa(verts[faces[i]]);
             glm::vec3 pb(verts[faces[i + 1]]);
             glm::vec3 pc(verts[faces[i + 2]]);
-            glm::vec3 norm = glm::cross(pc - pb, pa - pb);
+            glm::vec4 norm(glm::cross(pc - pb, pa - pb), 0);
             normals[faces[i]] += norm;
             normals[faces[i + 1]] += norm;
             normals[faces[i + 2]] += norm;
