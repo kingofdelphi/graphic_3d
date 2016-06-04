@@ -10,6 +10,8 @@
 #include "fragmentshader.h"
 #include "shaderprogram.h"
 
+enum CULL {BACKFACE, FRONTFACE, NONE};
+
 class Container {
     public:
         Container();
@@ -35,11 +37,17 @@ class Container {
             lines.clear();
             meshes.clear();
         }
+
+        void enableCull(CULL type = BACKFACE) {
+            cull = type;
+        }
+
     //private:
         Display * display;
         std::vector<Line> lines;
         std::vector<std::tuple<int, int, int>> meshes;
         ShaderProgram * program;
+        CULL cull;
 };
 
 #endif

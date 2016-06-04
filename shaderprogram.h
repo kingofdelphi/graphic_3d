@@ -6,6 +6,7 @@
 #include <iostream>
 #include "primitives.h"
 #include "glmdecl.h"
+#include "depthbuffer.h"
 
 class FragmentShader;
 class VertexShader;
@@ -17,7 +18,7 @@ struct ShaderProgram {
     std::map<std::string, glm::vec4> uniforms_vec4;
     std::map<std::string, std::vector<glm::vec4>*> attribute_map;
     std::vector<Light> lights;
-
+    DBuffer * dbuffer;
     void init(VertexShader * vsh, FragmentShader * fsh);
 
     void attribPointer(std::string attr, std::vector<glm::vec4> * alist) {

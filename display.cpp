@@ -1,14 +1,14 @@
 #include "display.h"
 
-Display::Display(int w, int h) : width(w), height(h), zbuffer(nullptr) {
+Display::Display() : zbuffer(nullptr) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         throw "error video";
     }
+    int width = 640;
+    int height = 480;
     window = SDL_CreateWindow("Glib", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if(!window) throw "cannot create window";
-
-    createZBuffer();
 }
 
 Display::~Display() {
@@ -16,32 +16,17 @@ Display::~Display() {
     SDL_Quit();
 }
 
-void Display::createZBuffer() {
-    zbuffer = new float * [height];
-    for (int i = 0; i < height; ++i) {
-        zbuffer[i] = new float[width];
-    }
-}
-
-void Display::freeZBuffer() {
-    for (int i = 0; i < height; ++i) {
-        delete [] zbuffer[i];
-    }
-    delete [] zbuffer;
-    zbuffer = nullptr;
-}
-
 void Display::drawFragment(const Vertex & v) {
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-    float x = v["position"].x, y = v["position"].y, z = v["position"].z;
-    glm::vec4 color = v["color"];
+    float x = v.attrs[0].x, y = v.attrs[0].y, z = v.attrs[0].z;
+    glm::vec4 color = v.attrs.size() < 2 ? glm::vec4(1, 0, 0, 1) : v.attrs[1];
     //color.x = MIN(MAX(0, color.x), 1.0);
     //color.y = MIN(MAX(0, color.y), 1.0);
     //color.z = MIN(MAX(0, color.z), 1.0);
     int X = (int)(round(x)), Y = (int)(round(y));
-    if (0 < X && X < width && 0 < Y && Y < height && z < zbuffer[Y][X]) {
-        zbuffer[Y][X] = z;
+    if (zbuffer->inbounds(X, Y) && z + .00001 < zbuffer->buffer[Y][X]) {
+        zbuffer->buffer[Y][X] = z;
         color.x *= 255;
         color.y *= 255;
         color.z *= 255;

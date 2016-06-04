@@ -10,7 +10,8 @@ class VertexShader {
     public:
         VertexShader() { }
 
-        virtual Vertex transform(const Vertex & v) = 0;
+        //transforms indexed vertex, vertices are specified in shader program
+        virtual Vertex transform(size_t index) = 0;
 
 };
 

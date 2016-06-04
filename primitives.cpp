@@ -61,25 +61,31 @@ void Line::draw(Container & cont) const {
 //    }
 }
 
-void incr(Vertex & a, std::map<std::string, glm::vec4> & delta) {
-    for (auto & i : a.attributes) {
-        const std::string & k = i.first;
-        a[k] += delta[k];
+void incr(Vertex & a, std::vector<glm::vec4> & delta) {
+    for (size_t i = 0; i < delta.size(); ++i) {
+        a.attrs[i] += delta[i];
     }
 }
 
 void scanline(Container & cont, Vertex a, Vertex b) {
-    assert(a["position"].y == b["position"].y);
-    a["position"].x = int(a["position"].x);
-    b["position"].x = int(b["position"].x);
-    float dx = b["position"].x - a["position"].x;
+    //assert(a["position"].y == b["position"].y);
+    a.attrs[0].x = int(a.attrs[0].x);
+    b.attrs[0].x = int(b.attrs[0].x);
+
+    float dx = b.attrs[0].x - a.attrs[0].x;
     if (dx < 0) dx = -dx;
-    std::map<std::string, glm::vec4> delta;
-    float xi = dx != 0 ? dx : 1;
-    for (auto & i : a.attributes) {
-        const std::string & k = i.first;
-        delta[k] = (b[k] - a[k]) / xi;
+    if (dx == 0) {
+        cont.display->drawFragment(cont.program->getFragmentShader()->r_shade(a));
+        return ;
     }
+
+    size_t N = a.attrs.size();
+    std::vector<glm::vec4> delta(N);
+
+    for (size_t i = 0; i < N; ++i) {
+        delta[i] = (b.attrs[i] - a.attrs[i]) / dx;
+    }
+
     for (int i = 0; i <= dx; ++i) {
         cont.display->drawFragment(cont.program->getFragmentShader()->r_shade(a));
         incr(a, delta);
@@ -88,34 +94,41 @@ void scanline(Container & cont, Vertex a, Vertex b) {
 
 
 void Mesh::draw(Container & cont) const {
-    SDL_Renderer * renderer = cont.display->getRenderer();
     Mesh tmp(*this);
+
     Vertex & p1 = tmp.a;
     Vertex & p2 = tmp.b;
     Vertex & p3 = tmp.c;
 
-    p1["position"].x = int(p1["position"].x);
-    p1["position"].y = int(p1["position"].y);
+    p1.attrs[0].x = int(p1.attrs[0].x);
+    p1.attrs[0].y = int(p1.attrs[0].y);
 
-    p2["position"].x = int(p2["position"].x);
-    p2["position"].y = int(p2["position"].y);
+    p2.attrs[0].x = int(p2.attrs[0].x);
+    p2.attrs[0].y = int(p2.attrs[0].y);
 
-    p3["position"].x = int(p3["position"].x);
-    p3["position"].y = int(p3["position"].y);
-    if (p1["position"].y > p2["position"].y) swap(p1, p2);
-    if (p2["position"].y > p3["position"].y) swap(p2, p3);
-    if (p1["position"].y > p2["position"].y) swap(p1, p2);
+    p3.attrs[0].x = int(p3.attrs[0].x);
+    p3.attrs[0].y = int(p3.attrs[0].y);
+    if (p1.attrs[0].y > p2.attrs[0].y) swap(p1, p2);
+    if (p2.attrs[0].y > p3.attrs[0].y) swap(p2, p3);
+    if (p1.attrs[0].y > p2.attrs[0].y) swap(p1, p2);
 
-    float y1 = p1["position"].y;
-    float y2 = p2["position"].y;
-    float y3 = p3["position"].y;
+    float y1 = p1.attrs[0].y;
+    float y2 = p2.attrs[0].y;
+    float y3 = p3.attrs[0].y;
 
     float rdy = y3 - y1;
-    if (y1 == y3) return ;
-    std::map<std::string, glm::vec4> rdelta;
-    for (auto & i : p1.attributes) {
-        const std::string & k = i.first;
-        rdelta[k] = (p3[k] - p1[k]) / rdy;
+    if (y1 == y3) {
+        std::cout << "draw a line\n";
+        return ;
+    }
+
+    size_t N = p1.attrs.size();
+    assert(p1.attrs.size() == p2.attrs.size());
+    assert(p2.attrs.size() == p3.attrs.size());
+    std::vector<glm::vec4> rdelta(N);
+
+    for (size_t i = 0; i < N; ++i) {
+        rdelta[i] = (p3.attrs[i] - p1.attrs[i]) / rdy;
     }
 
     Vertex rp(p1);
@@ -123,12 +136,11 @@ void Mesh::draw(Container & cont) const {
     if (y1 != y2) {
         Vertex lp(p1);
         float ldy = y2 - y1;
-        std::map<std::string, glm::vec4> ldelta;
-        for (auto & i : tmp.a.attributes) {
-            const std::string & k = i.first;
-            ldelta[k] = (p2[k] - p1[k]) / ldy;
-        }
+        std::vector<glm::vec4> ldelta(N);
 
+        for (size_t i = 0; i < N; ++i) {
+            ldelta[i] = (p2.attrs[i] - p1.attrs[i]) / ldy;
+        }
         for (int y = y1; y <= y2; ++y) {
             scanline(cont, lp, rp);
             incr(lp, ldelta);
@@ -140,19 +152,20 @@ void Mesh::draw(Container & cont) const {
         Vertex lp(p2);
 
         float ldy = y3 - y2;
-        std::map<std::string, glm::vec4> ldelta;
-        for (auto & i : tmp.a.attributes) {
-            const std::string & k = i.first;
-            ldelta[k] = (p3[k] - p2[k]) / ldy;
+
+        std::vector<glm::vec4> ldelta(N);
+
+        for (size_t i = 0; i < N; ++i) {
+            ldelta[i] = (p3.attrs[i] - p2.attrs[i]) / ldy;
         }
 
         if (y1 != y2) {//if top half was rasterized, move ahead one step
             incr(lp, ldelta);
         }
 
-        for (int y = rp["position"].y; y <= y3; ++y) {
+        for (int y = rp.attrs[0].y; y <= y3; ++y) {
             scanline(cont, lp, rp);
-            assert(lp["position"].y == rp["position"].y);
+            //assert(lp.attrs[0].y == rp.attrs[0].y);
             incr(lp, ldelta);
             incr(rp, rdelta);
         }

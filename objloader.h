@@ -52,7 +52,7 @@ struct Object {
                 a *= .5;
                 b *= .5;
                 c *= .5;
-                verts.push_back(glm::vec4(a, b, c, 1.0));
+                verts.push_back(glm::vec4(c, b, a, 1.0));
             } else if (ch[0] == 'f' ) {
                 int a, b, c;
                 f >> a >> b >> c;
@@ -68,7 +68,7 @@ struct Object {
             glm::vec3 pa(verts[faces[i]]);
             glm::vec3 pb(verts[faces[i + 1]]);
             glm::vec3 pc(verts[faces[i + 2]]);
-            glm::vec4 norm(glm::cross(pc - pb, pa - pb), 0);
+            glm::vec4 norm(glm::cross(pa - pb, pc - pb), 0);
             normals[faces[i]] += norm;
             normals[faces[i + 1]] += norm;
             normals[faces[i + 2]] += norm;
@@ -76,7 +76,14 @@ struct Object {
         for (auto & i : normals) i = glm::normalize(i);
 
         //colors
-        colors.resize(verts.size(), glm::vec4(1, 0, 0, 1));
+        colors.resize(verts.size());
+        for (int i = 0; i < verts.size(); ++i) {
+            float r = rand() * 1.0 / RAND_MAX;
+            float g = rand() * 1.0 / RAND_MAX;
+            float b = rand() * 1.0 / RAND_MAX;
+            r = 1; g = 1; b = 1;
+            colors[i] = glm::vec4(r, g, b, 1);
+        }
     }
 };
 

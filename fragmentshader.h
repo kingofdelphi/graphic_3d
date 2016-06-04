@@ -13,11 +13,11 @@ class FragmentShader {
         glm::vec4 snormal;
 
         Vertex r_shade(Vertex fragment) {
-            float w = fragment["position"].w;
-            for (auto & i : fragment.attributes) {
-                if (i.first != "position") i.second /= w;
+            float w = fragment.attrs[0].w;
+            for (size_t i = 1; i < fragment.attrs.size(); ++i) {
+                fragment.attrs[i] /= w;
             }
-            fragment["position"].w = 1.0;
+            fragment.attrs[0].w = 1.0;
             return shade(fragment);
         }
 

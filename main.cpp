@@ -16,9 +16,15 @@ using namespace std;
 
 Camera camera, light_cam;
 
+float tscale = 1;
+float asr = 1;
+int width = 640, height = 480;
+
 mat4x4 getPerspectiveMatrix() {
-    const float l = -1, r = 1, t = 1, b = -1;
-    const float n = 1.0, f = 100.0;
+    float l = -tscale, r = tscale, t = tscale, b = -tscale;
+    //l *= asr;
+    //r *= asr;
+    float n = 1.0, f = 10.0;
     mat4x4 pers = transpose(mat4x4(
                 2 * n / (r - l), 0, (r + l) / (r - l), 0,
                 0, 2 * n / (t - b), (t + b) / (t - b), 0,
@@ -30,25 +36,42 @@ mat4x4 getPerspectiveMatrix() {
 
 class ShadowVertexShader : public VertexShader {
     public:
-        Vertex transform(const Vertex & v) {
-            Vertex r(v);
+        Vertex transform(size_t index) {
+            Vertex r;
+            auto & amap = program->attribute_map;
             auto & unfms = program->uniforms_mat4;
-            r["position"] = unfms["mview"] * unfms["mmodel"] * r["position"];
-            r["position"] = unfms["pers"] * r["position"];
+
+            //add attributes to the vertex
+            //currently: position must go first, color must go second, rest can be any
+            r.attrs.push_back(amap["position"]->at(index));
+            
+            //process attributes
+            r.attrs[0] = unfms["pers"] * unfms["mview"] * unfms["mmodel"] * r.attrs[0];
             return r;
         }
 };
 
 class GouraudVertexShader : public VertexShader {
     public:
-        Vertex transform(const Vertex & v) {
-            Vertex r(v);
+        Vertex transform(size_t index) {
+            Vertex r;
+            auto & amap = program->attribute_map;
             auto & unfms = program->uniforms_mat4;
-            r["position"] = unfms["mmodel"] * r["position"];
-            r["old_pos"] = unfms["world_to_light"] * r["position"];//world space coords to light space homogeneous coords
-            r["position"] = unfms["mview"] * r["position"];
-            r["position"] = unfms["pers"] * r["position"];
-            r["normal"] = unfms["mnormal"] * r["normal"];
+            //add attributes to the vertex
+            //currently: position must go first, color must go second, rest can be any
+            r.attrs.push_back(amap["position"]->at(index));
+            r.attrs.push_back(amap["color"]->at(index));
+            r.attrs.push_back(amap["normal"]->at(index));
+
+            //process attributes
+            r.attrs[0] = unfms["mmodel"] * r.attrs[0];
+            r.attrs.push_back(unfms["world_to_light"] * r.attrs[0]);//world space coords to light space homogeneous coords
+
+            r.attrs.push_back(r.attrs[0]); //vertex world space position
+            
+            r.attrs[0] = unfms["pers"] * unfms["mview"] * r.attrs[0];
+            r.attrs[2] = unfms["mnormal"] * r.attrs[2];
+            
             return r;
         }
 };
@@ -61,71 +84,53 @@ class PassThroughFragmentShader : public FragmentShader {
         }
 };
 
-float **zbuffer = nullptr;
-int width, height;
-
 class PhongFragmentShader : public FragmentShader {
     public:
         Vertex shade(const Vertex & fragment) {
             Vertex r(fragment);
-            vec4 pos = r["old_pos"];
+            vec4 pos = r.attrs[3]; //oldpos
             pos /= pos.w;
-            pos.x = width * (1 + pos.x) * 0.5;
-            pos.y = height * (1 - pos.y) * 0.5;
-            float notshadow = 0;
+            auto & dbuffer = program->dbuffer;
+            glm::vec2 dev = dbuffer->todevice(pos.x, pos.y);
+            pos.x = dev.x;
+            pos.y = dev.y;
             int X = int(pos.x);
             int Y = int(pos.y);
-            for (int i = -1; i <= 1; ++i) {
-                for (int j = -1; j <= 1; ++j) {
+            float bias = 0.0004;
+            float s = -1, e = 1;
+            float notshadow = 0;
+            for (int i = s; i <= e; ++i) {
+                for (int j = s; j <= e; ++j) {
                     int AX = X + i, AY = Y + j;
-                    if (0 <= AX && AX < width && 0 <= AY && AY < height) {
-                        if (pos.z - 0.024398 < zbuffer[AY][AX]) notshadow += 1;
+                    if (dbuffer->inbounds(AX, AY)) {
+                        if (pos.z - bias < dbuffer->get(AX, AY)) notshadow += 1;
                     }
                 }
             }
-            notshadow /= 9.0;
+            notshadow /= (e - s + 1) * (e - s  + 1); 
             glm::vec4 color(0.5, 0.5, 0.5, 1.0);
-            glm::vec3 N = normalize(vec3(r["normal"]));
+            glm::vec3 N = normalize(vec3(r.attrs[2]));
+            glm::vec3 ppos(r.attrs[4]);
             //lighting calculations
             for (auto & i : program->lights) {
-                float f = dot(-i.normal, N);
+                glm::vec3 norm(glm::normalize(glm::vec3(i.pos) - ppos));
+                float f = dot(norm, N);
                 //f = 0.3;
                 if (f < 0) f = 0;
                 float Cd = 0.5;
                 vec4 scale = i.color * Cd * f;
                 color += notshadow * scale;
+                //color += vec4(0.5, 0.5, 0.5, 0) * notshadow;
             }
-            r["color"] *= color;
-            r["color"].x = std::min(std::max(r["color"].x, 0.f), 1.f);
-            r["color"].y = std::min(std::max(r["color"].y, 0.f), 1.f);
-            r["color"].z = std::min(std::max(r["color"].z, 0.f), 1.f);
+            r.attrs[1] *= color;
+            r.attrs[1].x = std::min(std::max(r.attrs[1].x, 0.f), 1.f);
+            r.attrs[1].y = std::min(std::max(r.attrs[1].y, 0.f), 1.f);
+            r.attrs[1].z = std::min(std::max(r.attrs[1].z, 0.f), 1.f);
             return r;
         }
 };
 
-void resize(int w, int h) {
-    if (zbuffer) {
-        for (int i = 0; i < height; ++i) delete [] zbuffer[i];
-        delete [] zbuffer;
-        zbuffer = nullptr;
-    }
-    width = w;
-    height = h;
-    zbuffer = new float * [height];
-    for (int i = 0; i < height; ++i) {
-        zbuffer[i] = new float[width];
-    }
-}
-
-void copyZBuffer(Container & cont) {
-    for (int i = 0; i < height; ++i) {
-        for (int j = 0; j < width; ++j) {
-            zbuffer[i][j] = cont.display->getZBuffer()[i][j];
-        }
-    }
-}
-
-//Cube cb(-1, 0, -2.5, 1, 1, 1);
+Cube cb(-1, 0, -2.5, 1, 1, 1);
 Cube cb2(0, -.5/2, -2, .5, .5, .5);
 Object obj;
 void renderScene(Container & cont) {
@@ -157,8 +162,6 @@ void renderScene(Container & cont) {
         //cont.addLine(l);
     }
 
-    glm::vec3 normal(0, 0, 1);
-
     vector<vec4> colors = {
         glm::vec4(1, 0, 0, 1),
         glm::vec4(1, 0, 1, 1),
@@ -188,29 +191,39 @@ void renderScene(Container & cont) {
     cont.addMesh(make_tuple(2, 3, 0));
 
     cont.flush(); //execute requests
-    //obj.draw(cont);
+    obj.draw(cont);
     //cb.push(cont);
-    cb2.push(cont);
+    //cb2.push(cont);
     cont.flush(); //execute requests
 }
 
 void logic(Display & disp) {
     SDL_Event e;
+
     VertexShader * vshader = new GouraudVertexShader();
     VertexShader * shadow_vshader = new ShadowVertexShader();
+
     FragmentShader * fshader = new PhongFragmentShader();
     FragmentShader * shadow_fshader = new PassThroughFragmentShader();
+
     ShaderProgram scene_program;
     scene_program.init(vshader, fshader);
+    
     glm::mat4x4 pers = getPerspectiveMatrix();
     scene_program.uniforms_mat4["pers"] = pers;
+
     ShaderProgram shadow_program;
     shadow_program.init(shadow_vshader, shadow_fshader);
+
     shadow_program.uniforms_mat4["pers"] = pers;
+
+    DBuffer zscene(width, height);
+    DBuffer zshadow(800, 800);
+
+    scene_program.dbuffer = &zshadow;
     Container cont;
     cont.setDisplay(&disp);
     obj.load("suzanne.obj");
-    float ang = 0;//3.1415/4;//3.1415 * .5;
     bool vsw = false;
     while (1) {
         while (SDL_PollEvent(&e)) {
@@ -219,8 +232,9 @@ void logic(Display & disp) {
                 if(e.window.event == SDL_WINDOWEVENT_RESIZED) {
                     int w = e.window.data1;
                     int h = e.window.data2;
-                    disp.resize(w, h);
-                    resize(w, h);
+                    zscene.resize(w, h);
+                    //zshadow.resize(w, h);
+                    asr = w * 1.0 / h;
                 }
             }  else if (e.type == SDL_KEYDOWN) {
                 if (e.key.keysym.sym == SDLK_SPACE) {
@@ -234,9 +248,7 @@ void logic(Display & disp) {
         glm::vec3 camvec(camera.getRotationMatrix() * glm::vec4(0, 0, -1, 0));
         const float delta = .1;
         if (keystate[SDL_SCANCODE_Q]) {
-            ang += .1;
         } else if (keystate[SDL_SCANCODE_E]) {
-            ang -= .1;
         } 
         if (keystate[SDL_SCANCODE_A]) {
             camera.yrot += .05;
@@ -249,30 +261,37 @@ void logic(Display & disp) {
         } else if (keystate[SDL_SCANCODE_S]) {
             camera.pos -= delta * camvec;
         }
+
+        if (keystate[SDL_SCANCODE_Z]) {
+            tscale -= .1;
+        } else if (keystate[SDL_SCANCODE_X]) {
+            tscale += .1;
+        }
         //logic
         //cb2.update();
         //rendering
-        glm::mat4x4 mrot = glm::rotate(glm::mat4(1.0), ang, glm::vec3(0, 1, 0));
-        glm::vec3 lght_vector(mrot * glm::vec4(0, 0, -1, 0));
-        Light lght(
-                glm::vec4(0, 0, 0, 1.0), 
-                glm::vec4(1, 1, 1, 1.0),
-                lght_vector
-                );
+        Light lght(glm::vec4(0, 1, 2, 1), glm::vec4(1, 1, 1, 1.0));
+        light_cam.pos = glm::vec3(lght.pos);
+        light_cam.yrot = 0;
         disp.clear();
+        zshadow.clear();
         //render from light's point of view
-        light_cam.pos = glm::vec3(0, 1, 1);
-        light_cam.yrot = ang; //orient camera in the direction of light
         cont.setProgram(&shadow_program);
+        cont.display->setZBuffer(&zshadow);
         shadow_program.uniforms_mat4["mview"] = light_cam.getViewMatrix();
+
+        //render back faces only from light's point of view
+        cont.enableCull(FRONTFACE);
         renderScene(cont);
         if (!vsw) {
+            cont.enableCull(BACKFACE);
             scene_program.clearLights();
             scene_program.addLight(lght);
-            copyZBuffer(cont);//backup the z buffer
             //render from camera's point of view
             disp.clear();
+            zscene.clear();
             cont.setProgram(&scene_program);
+            cont.display->setZBuffer(&zscene);
             scene_program.uniforms_mat4["mview"] = camera.getViewMatrix();
             scene_program.uniforms_mat4["to_light_space"] = pers * 
                 light_cam.getViewMatrix() * glm::inverse(camera.getViewMatrix());

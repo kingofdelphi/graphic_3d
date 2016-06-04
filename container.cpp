@@ -2,7 +2,7 @@
 #include <iostream>
 
 Container::Container() 
-    : display(nullptr) {
+    : display(nullptr), cull(NONE) {
 }
 
 void Container::addMesh(const std::tuple<int, int, int> & mesh) {
@@ -42,62 +42,83 @@ void Container::flush() {
     using namespace glm;
 
     //toscreen
-    float width = display->getWidth();
-    float height = display->getHeight();
+    float width = display->getZBuffer()->width;
+    float height = display->getZBuffer()->height;
 
     //fragment shader
     VertexShader * vshader = program->getVertexShader();
     FragmentShader * fshader = program->getFragmentShader();
+
     auto & unfms = program->uniforms_mat4;
+
     if (program->attribute_map.find("position") == program->attribute_map.end()) {
         std::cout << "no position specified";
         throw ;
     }
+
     for (auto & i : meshes) {
+
         int p = std::get<0>(i);
         int q = std::get<1>(i);
         int r = std::get<2>(i);
-        auto & amap = program->attribute_map;
 
-        Vertex a, b, c;
-        for (auto & i : program->attribute_map) {
-            a.addAttribute(i.first, amap[i.first]->at(p));
-            b.addAttribute(i.first, amap[i.first]->at(q));
-            c.addAttribute(i.first, amap[i.first]->at(r));
-        }
+        Vertex a = vshader->transform(p);
+        Vertex b = vshader->transform(q);
+        Vertex c = vshader->transform(r);
 
-        a = vshader->transform(a);
-        b = vshader->transform(b);
-        c = vshader->transform(c);
-
-        float aw = a["position"].w;
-        float bw = b["position"].w;
-        float cw = c["position"].w;
+        float aw = a.attrs[0].w;
+        float bw = b.attrs[0].w;
+        float cw = c.attrs[0].w;
 
         //move everything from eye space to screen space 
-        for (auto & j : a.attributes) {
-            std::string k = j.first;
-            a[k] /= aw;
-            b[k] /= bw;
-            c[k] /= cw;
+        for (size_t i = 0; i < a.attrs.size(); ++i) {
+            a.attrs[i] /= aw;
+            b.attrs[i] /= bw;
+            c.attrs[i] /= cw;
         }
-        
-        a["position"].w = 1 / aw;
-        b["position"].w = 1 / bw;
-        c["position"].w = 1 / cw;
 
-        auto toscreen = [width, height](vec4 pos) {
-            pos.x = (1 + pos.x) * width * .5;
-            pos.y = (1 - pos.y) * height * .5;
-            return pos;
-        };
+        bool culled = false;
 
-        a["position"] = toscreen(a["position"]);
-        b["position"] = toscreen(b["position"]);
-        c["position"] = toscreen(c["position"]);
+        if (cull != NONE) {//if culling is enabled
+            //assumes vertices are specified in clockwise order
+           
+            float x1 = a.attrs[0].x;
+            float y1 = a.attrs[0].y;
 
-        Mesh m(a, b, c);
-        m.draw(*this);
+            float x2 = b.attrs[0].x;
+            float y2 = b.attrs[0].y;
+
+            float x3 = c.attrs[0].x;
+            float y3 = c.attrs[0].y;
+
+            float z = (x1 - x2) * (y3 - y2) - (y1 - y2) * (x3 - x2);
+
+            if (cull == FRONTFACE) {
+                culled = z >= 0;
+            } else if (cull == BACKFACE) {
+                culled = z <= 0;
+            }
+
+        }
+
+        if (!culled) {
+            //w = z, reverse z for perspective correction
+            a.attrs[0].w = 1 / aw;
+            b.attrs[0].w = 1 / bw;
+            c.attrs[0].w = 1 / cw;
+
+            auto toscreen = [width, height](vec4 pos) {
+                pos.x = (1 + pos.x) * width * .5;
+                pos.y = (1 - pos.y) * height * .5;
+                return pos;
+            };
+
+            a.attrs[0] = toscreen(a.attrs[0]);
+            b.attrs[0] = toscreen(b.attrs[0]);
+            c.attrs[0] = toscreen(c.attrs[0]);
+
+            Mesh(a, b, c).draw(*this);
+        }
     }
 
     clearRequests();
