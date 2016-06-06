@@ -4,66 +4,47 @@
 
 using std::swap;
 
-void Line::draw(Container & cont) const {
-//    int x1 = start.pos.x, x2 = finish.pos.x;
-//    int y1 = start.pos.y, y2 = finish.pos.y;
-//    int dx = x2 - x1, dy = y2 - y1;
-//    int xinc = sign(dx), yinc = sign(dy);
-//    int delta = 0, x = x1, y = y1;
-//    int inc = 0, param = 0;
-//    bool xmotion;
-//    int xmove = xinc, ymove = yinc;
-//    float factor = 0;
-//    if (abs(dx) > abs(dy)) {
-//        factor = xinc;
-//        ymove = 0;
-//        inc = xinc * dy;
-//        param = dx;
-//        xmotion = true;
-//    } else {
-//        factor = yinc;
-//        xmove = 0;
-//        inc = yinc * dx;
-//        param = dy;
-//        xmotion = false;
-//    }
-//    int c = abs(param) + 1;
-//    if (param == 0) { //a single point
-//        cont.display->drawFragment(start);
-//        return ;
-//    }
-//    glm::vec4 fcolor = factor * (finish.color - start.color) / (float)param;
-//    glm::vec3 fnormal = factor * (finish.normal - start.normal) / (float)param;
-//    glm::vec4 color = start.color;
-//    glm::vec3 normal = start.normal;
-//    float z = start.pos.z;
-//    float fz = factor * (finish.pos.z - start.pos.z) / (float)param;
-//    int Aparam = param * sign(param);
-//    //for a line to not have holes, this invariant must hold: x(n+1) - x(n) <= 1, y(n+1) - y(n) <= 1
-//    for (int i = 0; i < c; ++i) {
-//        Vertex v(glm::vec4(x, y, z, 1.0), color, normal);
-//        //apply fragment shading
-//        v = cont.program->getFragmentShader()->shade(v);
-//        //screen test
-//        cont.display->drawFragment(v);
-//        delta += inc;
-//        if (abs(delta) >= Aparam) {
-//            //int q = delta / param;
-//            //if (abs(q) > 1) throw "how come?";
-//            if (xmotion) y += yinc; else x += xinc;
-//            delta -= (xmotion ? yinc : xinc) * param;
-//        }
-//        x += xmove;
-//        y += ymove;
-//        z += fz;
-//        normal += fnormal;
-//        color += fcolor;
-//    }
-}
-
 void incr(Vertex & a, std::vector<glm::vec4> & delta) {
     for (size_t i = 0; i < delta.size(); ++i) {
         a.attrs[i] += delta[i];
+    }
+}
+
+
+void Line::draw(Container & cont) const {
+    SDL_Renderer * r = cont.display->getRenderer();
+    int x1 = start.attrs[0].x, x2 = finish.attrs[0].x;
+    int y1 = start.attrs[0].y, y2 = finish.attrs[0].y;
+    int dx = x2 - x1, dy = y2 - y1;
+
+    float param = 0;
+
+    if (abs(dx) > abs(dy)) {
+        param = abs(dx);
+    } else {
+        param = abs(dy);
+    }
+
+    int c = abs(param) + 1;
+    if (dx == 0) { //a single point
+        cont.display->drawFragment(start);
+        return ;
+    }
+
+    size_t N = start.attrs.size();
+    std::vector<glm::vec4> delta(N);
+
+    for (size_t i = 0; i < N; ++i) {
+        delta[i] = (finish.attrs[i] - start.attrs[i]) / param;
+    }
+
+    Vertex a(start);
+    for (int i = 0; i < c; ++i) {
+        //apply fragment shading
+        Vertex v = cont.program->getFragmentShader()->r_shade(a);
+        //screen test
+        cont.display->drawFragment(v);
+        incr(a, delta);
     }
 }
 
@@ -118,7 +99,10 @@ void Mesh::draw(Container & cont) const {
 
     float rdy = y3 - y1;
     if (y1 == y3) {
-        std::cout << "draw a line\n";
+        if (p1.attrs[0].x > p2.attrs[0].x) swap(p1, p2);
+        if (p2.attrs[0].x > p3.attrs[0].x) swap(p2, p3);
+        if (p1.attrs[0].x > p2.attrs[0].x) swap(p1, p2);
+        scanline(cont, p1, p2);
         return ;
     }
 

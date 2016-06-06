@@ -30,9 +30,15 @@ class Container {
         }
 
         bool clipLine(Line & line);
-        void addLine(const Line & line);
+
+        std::vector<Mesh> clipMesh(Mesh mesh);
+
+        void addLine(const std::pair<int, int> & line);
+
         void addMesh(const std::tuple<int, int, int> & mesh);
+
         void flush();
+
         void clearRequests() {
             lines.clear();
             meshes.clear();
@@ -44,7 +50,7 @@ class Container {
 
     //private:
         Display * display;
-        std::vector<Line> lines;
+        std::vector<std::pair<int, int>> lines;
         std::vector<std::tuple<int, int, int>> meshes;
         ShaderProgram * program;
         CULL cull;

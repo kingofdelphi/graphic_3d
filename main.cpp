@@ -24,11 +24,12 @@ mat4x4 getPerspectiveMatrix() {
     float l = -tscale, r = tscale, t = tscale, b = -tscale;
     //l *= asr;
     //r *= asr;
-    float n = 1.0, f = 10.0;
+    float n = 2, f = 100.0;
+    float m = 1;
     mat4x4 pers = transpose(mat4x4(
-                2 * n / (r - l), 0, (r + l) / (r - l), 0,
-                0, 2 * n / (t - b), (t + b) / (t - b), 0,
-                0, 0, (f + n) / (f - n), -2 * f * n / (f - n),
+                2 * m / (r - l), 0, (r + l) / (r - l), 0,
+                0, 2 * m / (t - b), (t + b) / (t - b), 0,
+                0, 0, -(f + n) / (f - n), -2 * f * n / (f - n),
                 0, 0, -1, 0
                 ));
     return pers;
@@ -133,34 +134,53 @@ class PhongFragmentShader : public FragmentShader {
 Cube cb(-1, 0, -2.5, 1, 1, 1);
 Cube cb2(0, -.5/2, -2, .5, .5, .5);
 Object obj;
-void renderScene(Container & cont) {
-    //add objects to the container
-    if (cont.program == nullptr) throw "no vertex shader";
+
+void drawgrid(Container & cont) {
     auto & unfms = cont.program->uniforms_mat4;
+
     unfms["mmodel"] = glm::mat4x4(1.0);
     unfms["mnormal"] = glm::mat4x4(1.0);
+
     float gap = 1;
     float span = 10;
     float steps = 10;
+
+    std::vector<glm::vec4> vertices;
+
     for (int i = -10; i <= 10; ++i) {
         glm::vec3 normal(0, 0, 1);
-        glm::vec4 a(i * gap, -.5, span, 1);
-        glm::vec4 b(i * gap, -.5, -span, 1);
-        glm::vec4 acolor(1, 0, 0, 1);
-        glm::vec4 bcolor(1, 1, 1, 1);
-        Line l(Vertex(a), Vertex(b));
-        //cont.addLine(l);
+        glm::vec4 a(i * gap, -1, -span, 1);
+        glm::vec4 b(i * gap, -1, span, 1);
+        int c = vertices.size();
+        vertices.push_back(a);
+        vertices.push_back(b);
+        cont.addLine(std::make_pair(c, c + 1));
     }
 
     for (int i = -10; i <= 10; ++i) {
         glm::vec3 normal(1, 0, 0);
-        glm::vec4 a(-span, -.5, i * gap, 1);
-        glm::vec4 b(span, -.5, i * gap, 1);
-        glm::vec4 acolor(0, 1, 0, 1);
-        glm::vec4 bcolor(1, 0, 1, 1);
-        Line l(Vertex(a), Vertex(b));
-        //cont.addLine(l);
+        glm::vec4 a(-span, -1, i * gap, 1);
+        glm::vec4 b(span, -1, i * gap, 1);
+        int c = vertices.size();
+        vertices.push_back(a);
+        vertices.push_back(b);
+        cont.addLine(std::make_pair(c, c + 1));
     }
+
+    std::vector<glm::vec4> colors(vertices.size(), glm::vec4(1, 0, 0, 1));
+    std::vector<glm::vec4> normals(vertices.size(), glm::vec4(0, 0, 1, 0));
+
+    cont.program->attribPointer("position", &vertices);
+    cont.program->attribPointer("color", &colors);
+    cont.program->attribPointer("normal", &normals);
+
+    cont.flush();
+
+}
+
+void renderScene(Container & cont) {
+    //add objects to the container
+    if (cont.program == nullptr) throw "no vertex shader";
 
     vector<vec4> colors = {
         glm::vec4(1, 0, 0, 1),
@@ -183,6 +203,9 @@ void renderScene(Container & cont) {
         glm::vec4(2, -.5, -1, 1),
     };
 
+    auto & unfms = cont.program->uniforms_mat4;
+    unfms["mmodel"] = glm::mat4x4(1.0);
+    unfms["mnormal"] = glm::mat4x4(1.0);
     cont.program->attribPointer("position", &vertices);
     cont.program->attribPointer("color", &colors);
     cont.program->attribPointer("normal", &normals);
@@ -195,6 +218,7 @@ void renderScene(Container & cont) {
     //cb.push(cont);
     //cb2.push(cont);
     cont.flush(); //execute requests
+    drawgrid(cont);
 }
 
 void logic(Display & disp) {
@@ -233,7 +257,6 @@ void logic(Display & disp) {
                     int w = e.window.data1;
                     int h = e.window.data2;
                     zscene.resize(w, h);
-                    //zshadow.resize(w, h);
                     asr = w * 1.0 / h;
                 }
             }  else if (e.type == SDL_KEYDOWN) {
