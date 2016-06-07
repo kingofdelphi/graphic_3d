@@ -1,8 +1,8 @@
 #ifndef CUBE_H
 #define CUBE_H
 
-#include "container.h"
-#include "glmdecl.h"
+#include "../lib/include/container.h"
+#include "../lib/include/glmdecl.h"
 
 #include <iostream>
 #include <tuple>

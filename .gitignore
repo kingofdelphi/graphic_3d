@@ -1,4 +1,4 @@
 *.vim
-*.depends
+*.d
 *.o
 *swp

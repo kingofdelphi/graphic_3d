@@ -1,7 +1,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "glmdecl.h"
+#include "../lib/include/glmdecl.h"
 
 struct Camera {
     glm::vec3 pos;
@@ -22,4 +22,5 @@ struct Camera {
         return mrot;
     }
 };
+
 #endif

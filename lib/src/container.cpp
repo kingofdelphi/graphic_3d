@@ -1,4 +1,5 @@
-#include "container.h"
+#include "../include/container.h"
+#include "../include/depthbuffer.h"
 #include <iostream>
 
 Container::Container() 
@@ -52,12 +53,12 @@ std::vector<Mesh> Container::clipMesh(Mesh mesh) {
         swp ^= 1;
     }
     
-    //both all points are behind the clip plane 
+    //all points are behind the clip plane 
     if (v[c]->attrs[0].z <= -v[c]->attrs[0].w) {
         return res; //empty
     }
 
-    //both all points are at the front of the clip plane 
+    //all points are at the front of the clip plane 
     if (v[a]->attrs[0].z >= -v[a]->attrs[0].w) {
         res.push_back(mesh);
     } else
@@ -95,15 +96,7 @@ void Container::flush() {
 
     using namespace glm;
 
-    //toscreen
-    float width = display->getZBuffer()->width;
-    float height = display->getZBuffer()->height;
-
-    auto toscreen = [width, height](vec4 pos) {
-        pos.x = (1 + pos.x) * width * .5;
-        pos.y = (1 - pos.y) * height * .5;
-        return pos;
-    };
+    DBuffer * zbuffer = display->getZBuffer();
 
     //fragment shader
     VertexShader * vshader = program->getVertexShader();
@@ -190,9 +183,9 @@ void Container::flush() {
                 mesh.b.attrs[0].w = 1 / bw;
                 mesh.c.attrs[0].w = 1 / cw;
 
-                mesh.a.attrs[0] = toscreen(mesh.a.attrs[0]);
-                mesh.b.attrs[0] = toscreen(mesh.b.attrs[0]);
-                mesh.c.attrs[0] = toscreen(mesh.c.attrs[0]);
+                mesh.a.attrs[0] = zbuffer->todevice(mesh.a.attrs[0]);
+                mesh.b.attrs[0] = zbuffer->todevice(mesh.b.attrs[0]);
+                mesh.c.attrs[0] = zbuffer->todevice(mesh.c.attrs[0]);
 
                 mesh.draw(*this);
             }
@@ -237,8 +230,8 @@ void Container::flush() {
             line.start.attrs[0].w = 1 / aw;
             line.finish.attrs[0].w = 1 / bw;
 
-            line.start.attrs[0] = toscreen(line.start.attrs[0]);
-            line.finish.attrs[0] = toscreen(line.finish.attrs[0]);
+            line.start.attrs[0] = zbuffer->todevice(line.start.attrs[0]);
+            line.finish.attrs[0] = zbuffer->todevice(line.finish.attrs[0]);
 
             line.draw(*this);
         }

@@ -1,25 +1,34 @@
-CXX = g++ -Ofast
+CXX = g++
 LDFLAGS = `pkg-config --libs sdl2`
-CXXFLAGS = `pkg-config --cflags sdl2` -std=c++11
-TARGET = glib
-SRCS = main.cpp display.cpp container.cpp primitives.cpp shaderprogram.cpp
-OBJS = $(SRCS:.cpp=.o)
-DEPS   = $(SRCS:.cpp=.depends)
+CXXFLAGS = `pkg-config --cflags sdl2` -std=c++11 -Ofast
+TARGET = bin/glib
+LIBSRCS = $(wildcard lib/src/*.cpp)
+LIBOBJS = $(addprefix lib/obj/,$(notdir $(LIBSRCS:.cpp=.o)))
+LIBDEPS = $(addprefix lib/obj/,$(notdir $(LIBSRCS:.cpp=.d)))
 
-.PHONY: clean all
+PRGSRCS = $(wildcard src/*.cpp)
+PRGOBJS = $(addprefix obj/,$(notdir $(PRGSRCS:.cpp=.o)))
+PRGDEPS = $(addprefix obj/,$(notdir $(PRGSRCS:.cpp=.d)))
+
+#$(info ${OBJS})
+
+.PHONY: clean all lib
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(OBJS) -o $(TARGET)
+lib: $(LIBOBJS)
 
-.cpp.o:
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(TARGET): lib $(PRGOBJS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(LIBOBJS) $(PRGOBJS) -o $(TARGET) 
 
-%.depends: %.cpp
-	$(CXX) -M $(CXXFLAGS) $< > $@
+obj/%.o : src/%.cpp
+	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
+
+lib/obj/%.o : lib/src/%.cpp
+	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
+
+-include $(LIBDEPS)
+-include $(PRGDEPS)
 
 clean:
-	rm -f $(OBJS) $(DEPS) $(TARGET)
-
--include $(DEPS)
+	rm -f $(LIBOBJS) $(PRGOBJS) $(LIBDEPS) $(PRGDEPS) $(TARGET)

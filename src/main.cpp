@@ -1,13 +1,9 @@
-#include "glmdecl.h"
-#include "display.h"
-#include "container.h"
-#include "cube.h"
-#include "vshader.h"
-#include "fragmentshader.h"
-#include "shaderprogram.h"
-#include "primitives.h"
-#include "objloader.h"
-#include "camera.h"
+#include "../lib/include/glib.h"
+
+#include "../include/objloader.h"
+#include "../include/cube.h"
+#include "../include/camera.h"
+
 #include <vector>
 #include <tuple>
 

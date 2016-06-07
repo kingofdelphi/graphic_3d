@@ -1,6 +1,6 @@
-#include "shaderprogram.h"
-#include "fragmentshader.h"
-#include "vshader.h"
+#include "../include/shaderprogram.h"
+#include "../include/fragmentshader.h"
+#include "../include/vshader.h"
 
 VertexShader * ShaderProgram::getVertexShader() {
     return vshader;

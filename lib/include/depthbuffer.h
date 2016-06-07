@@ -12,6 +12,12 @@ struct DBuffer {
         resize(w, h);
     }
     
+    glm::vec4 todevice(glm::vec4 p) {
+        p.x = (1 + p.x) * width * .5;
+        p.y = (1 - p.y) * height * .5;
+        return p;
+    }
+
     glm::vec2 todevice(float x, float y) {
         x = (1 + x) * width * .5;
         y = (1 - y) * height * .5;

@@ -4,8 +4,8 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-#include "glmdecl.h"
-#include "container.h"
+#include "../lib/include/glmdecl.h"
+#include "../lib/include/container.h"
 #include <tuple>
 #include <vector>
 

@@ -1,4 +1,4 @@
-#include "display.h"
+#include "../include/display.h"
 
 Display::Display() : zbuffer(nullptr) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
