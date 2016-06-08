@@ -12,9 +12,20 @@ PRGDEPS = $(addprefix obj/,$(notdir $(PRGSRCS:.cpp=.d)))
 
 #$(info ${OBJS})
 
-.PHONY: clean all lib
+.PHONY: clean all lib dirs
 
-all: $(TARGET)
+all: dirs $(TARGET)
+
+dirs: bin lib/obj obj
+
+lib/obj:
+	mkdir lib/obj
+
+obj:
+	mkdir obj
+
+bin:
+	mkdir bin
 
 lib: $(LIBOBJS)
 
@@ -31,4 +42,4 @@ lib/obj/%.o : lib/src/%.cpp
 -include $(PRGDEPS)
 
 clean:
-	rm -f $(LIBOBJS) $(PRGOBJS) $(LIBDEPS) $(PRGDEPS) $(TARGET)
+	rm -rf lib/obj obj bin

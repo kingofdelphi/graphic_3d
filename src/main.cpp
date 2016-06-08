@@ -322,7 +322,10 @@ void logic(Display & disp) {
     }
 
     delete vshader;
+    delete shadow_vshader;
+
     delete fshader;
+    delete shadow_fshader;
 }
 
 int main(int argc, char ** argv) {
