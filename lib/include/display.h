@@ -12,7 +12,6 @@ class Vertex; //forward declaration (to resolve cyclic header dependencies)
 class Display {
     SDL_Window * window;
     SDL_Renderer * renderer;
-    DBuffer * zbuffer;
     public:
     Display();
     ~Display();
@@ -26,21 +25,12 @@ class Display {
         return renderer;
     }
 
-    void setZBuffer(DBuffer * dbuf) {
-        zbuffer = dbuf;
-    }
-
-    DBuffer * getZBuffer() {
-        return zbuffer;
-    }
-
     void drawFragment(const Vertex & v);
-    
+
     void flush() {
         SDL_RenderPresent(renderer);
     }
 
-    private:
 
 };
 

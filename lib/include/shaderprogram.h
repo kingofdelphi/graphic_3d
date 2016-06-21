@@ -18,7 +18,9 @@ struct ShaderProgram {
     std::map<std::string, glm::vec4> uniforms_vec4;
     std::map<std::string, std::vector<glm::vec4>*> attribute_map;
     std::vector<Light> lights;
-    DBuffer * dbuffer;
+
+    DBuffer * dbuffer; //shadow map
+
     void init(VertexShader * vsh, FragmentShader * fsh);
 
     void attribPointer(std::string attr, std::vector<glm::vec4> * alist) {

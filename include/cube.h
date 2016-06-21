@@ -97,7 +97,8 @@ struct Cube {
 
         mp["mmodel"] = modelmat;
         mp["mnormal"] = normalmat;
-
+        
+        mp["PVM"] = mp["PV"] * modelmat;
         cont.program->attribPointer("position", &verts);
         cont.program->attribPointer("color", &colors);
         cont.program->attribPointer("normal", &normals);

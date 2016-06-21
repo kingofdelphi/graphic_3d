@@ -43,7 +43,7 @@ class ShadowVertexShader : public VertexShader {
             r.attrs.push_back(amap["position"]->at(index));
             
             //process attributes
-            r.attrs[0] = unfms["pers"] * unfms["mview"] * unfms["mmodel"] * r.attrs[0];
+            r.attrs[0] = unfms["PVM"] * r.attrs[0];
             return r;
         }
 };
@@ -61,12 +61,12 @@ class GouraudVertexShader : public VertexShader {
             r.attrs.push_back(amap["normal"]->at(index));
 
             //process attributes
-            r.attrs[0] = unfms["mmodel"] * r.attrs[0];
-            r.attrs.push_back(unfms["world_to_light"] * r.attrs[0]);//world space coords to light space homogeneous coords
+            glm::vec4 world = unfms["mmodel"] * r.attrs[0];
+            r.attrs.push_back(unfms["world_to_light"] * world);//world space coords to light space homogeneous coords
 
-            r.attrs.push_back(r.attrs[0]); //vertex world space position
+            r.attrs.push_back(world); //vertex world space position
             
-            r.attrs[0] = unfms["pers"] * unfms["mview"] * r.attrs[0];
+            r.attrs[0] = unfms["PVM"] * r.attrs[0];
             r.attrs[2] = unfms["mnormal"] * r.attrs[2];
             
             return r;
@@ -136,6 +136,7 @@ void drawgrid(Container & cont) {
 
     unfms["mmodel"] = glm::mat4x4(1.0);
     unfms["mnormal"] = glm::mat4x4(1.0);
+    unfms["PVM"] = unfms["PV"];
 
     float gap = 1;
     float span = 10;
@@ -210,9 +211,9 @@ void renderScene(Container & cont) {
     cont.addMesh(make_tuple(2, 3, 0));
 
     cont.flush(); //execute requests
-    obj.draw(cont);
+    //obj.draw(cont);
     //cb.push(cont);
-    //cb2.push(cont);
+    cb2.push(cont);
     cont.flush(); //execute requests
     drawgrid(cont);
 }
@@ -287,7 +288,8 @@ void logic(Display & disp) {
             tscale += .1;
         }
         //logic
-        //cb2.update();
+        cb2.update();
+        obj.update();
         //rendering
         Light lght(glm::vec4(0, 1, 2, 1), glm::vec4(1, 1, 1, 1.0));
         light_cam.pos = glm::vec3(lght.pos);
@@ -296,8 +298,9 @@ void logic(Display & disp) {
         zshadow.clear();
         //render from light's point of view
         cont.setProgram(&shadow_program);
-        cont.display->setZBuffer(&zshadow);
+        cont.setZBuffer(&zshadow);
         shadow_program.uniforms_mat4["mview"] = light_cam.getViewMatrix();
+        shadow_program.uniforms_mat4["PV"] = shadow_program.uniforms_mat4["pers"] * shadow_program.uniforms_mat4["mview"];
 
         //render back faces only from light's point of view
         cont.enableCull(FRONTFACE);
@@ -310,8 +313,9 @@ void logic(Display & disp) {
             disp.clear();
             zscene.clear();
             cont.setProgram(&scene_program);
-            cont.display->setZBuffer(&zscene);
+            cont.setZBuffer(&zscene);
             scene_program.uniforms_mat4["mview"] = camera.getViewMatrix();
+            scene_program.uniforms_mat4["PV"] = scene_program.uniforms_mat4["pers"] * scene_program.uniforms_mat4["mview"];
             scene_program.uniforms_mat4["to_light_space"] = pers * 
                 light_cam.getViewMatrix() * glm::inverse(camera.getViewMatrix());
             scene_program.uniforms_mat4["world_to_light"] = pers * light_cam.getViewMatrix();

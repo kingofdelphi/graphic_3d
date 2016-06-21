@@ -48,8 +48,17 @@ class Container {
             cull = type;
         }
 
-    //private:
+        void setZBuffer(DBuffer * dbuf) {
+            zbuffer = dbuf;
+        }
+
+        DBuffer * getZBuffer() {
+            return zbuffer;
+        }
+
+        //private:
         Display * display;
+        DBuffer * zbuffer;
         std::vector<std::pair<int, int>> lines;
         std::vector<std::tuple<int, int, int>> meshes;
         ShaderProgram * program;

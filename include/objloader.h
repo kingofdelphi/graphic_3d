@@ -16,8 +16,12 @@ struct Object {
     std::vector<glm::vec4> normals;
     float rot;
     Object() : rot(0) { }
-    void draw(Container & cont) {
+
+    void update() {
         rot += .01;
+    }
+
+    void draw(Container & cont) {
         auto & mp = cont.program->uniforms_mat4;
         glm::mat4x4 model = glm::transpose(glm::mat4x4(
                     1, 0, 0, 0,
@@ -28,6 +32,7 @@ struct Object {
         glm::mat4x4 mrot = glm::rotate(glm::mat4(1.0), rot, glm::vec3(0, 1, 0));
         mp["mmodel"] = model * mrot;
         mp["mnormal"] = mrot * glm::mat4x4(1.0);
+        mp["PVM"] = mp["PV"] * mp["mmodel"];
 
         cont.program->attribPointer("position", &verts);
         cont.program->attribPointer("color", &colors);

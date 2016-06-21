@@ -3,7 +3,7 @@
 #include <iostream>
 
 Container::Container() 
-    : display(nullptr), cull(NONE) {
+    : zbuffer(nullptr), display(nullptr), cull(NONE) {
 }
 
 void Container::addMesh(const std::tuple<int, int, int> & mesh) {
@@ -18,6 +18,8 @@ Vertex clip(Vertex a, const Vertex & b) {
 
     float w1 = a.attrs[0].w;
     float w2 = b.attrs[0].w;
+
+    if (abs(w1 - w2) < 0.0001) return a;
 
     float z1 = a.attrs[0].z;
     float z2 = b.attrs[0].z;
@@ -96,9 +98,7 @@ void Container::flush() {
 
     using namespace glm;
 
-    DBuffer * zbuffer = display->getZBuffer();
-
-    //fragment shader
+    //shaders
     VertexShader * vshader = program->getVertexShader();
     FragmentShader * fshader = program->getFragmentShader();
 
@@ -109,14 +109,20 @@ void Container::flush() {
         throw ;
     }
 
+    std::vector<Vertex> transformed;
+
+    for (size_t i = 0; i < program->attribute_map["position"]->size(); ++i) {
+        transformed.push_back(vshader->transform(i));
+    }
+
     for (auto & i : meshes) {
         int p = std::get<0>(i);
         int q = std::get<1>(i);
         int r = std::get<2>(i);
 
-        Vertex a = vshader->transform(p);
-        Vertex b = vshader->transform(q);
-        Vertex c = vshader->transform(r);
+        Vertex a = transformed[p];
+        Vertex b = transformed[q];
+        Vertex c = transformed[r];
 
         //fov clipping => z clipping
         auto res = clipMesh(Mesh(a, b, c));
@@ -198,8 +204,8 @@ void Container::flush() {
         int p = i.first;
         int q = i.second;
 
-        Vertex a = vshader->transform(p);
-        Vertex b = vshader->transform(q);
+        Vertex a = transformed[p];
+        Vertex b = transformed[q];
 
         Line line(a, b);
 

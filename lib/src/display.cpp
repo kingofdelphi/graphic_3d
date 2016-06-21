@@ -1,6 +1,6 @@
 #include "../include/display.h"
 
-Display::Display() : zbuffer(nullptr) {
+Display::Display() {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         throw "error video";
     }
@@ -17,16 +17,10 @@ Display::~Display() {
 }
 
 void Display::drawFragment(const Vertex & v) {
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-    float x = v.attrs[0].x, y = v.attrs[0].y, z = v.attrs[0].z;
-    glm::vec4 color = v.attrs.size() < 2 ? glm::vec4(1, 0, 0, 1) : v.attrs[1];
-    //color.x = MIN(MAX(0, color.x), 1.0);
-    //color.y = MIN(MAX(0, color.y), 1.0);
-    //color.z = MIN(MAX(0, color.z), 1.0);
-    int X = (int)(round(x)), Y = (int)(round(y));
-    if (zbuffer->inbounds(X, Y) && z + .00001 < zbuffer->buffer[Y][X]) {
-        zbuffer->buffer[Y][X] = z;
+    float x = v.attrs[0].x, y = v.attrs[0].y;
+    if (v.attrs.size() >= 2) {
+        glm::vec4 color = v.attrs[1];
+        int X = (int)(round(x)), Y = (int)(round(y));
         color.x *= 255;
         color.y *= 255;
         color.z *= 255;

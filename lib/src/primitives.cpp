@@ -10,7 +10,6 @@ void incr(Vertex & a, std::vector<glm::vec4> & delta) {
     }
 }
 
-
 void Line::draw(Container & cont) const {
     SDL_Renderer * r = cont.display->getRenderer();
     int x1 = start.attrs[0].x, x2 = finish.attrs[0].x;
@@ -27,7 +26,7 @@ void Line::draw(Container & cont) const {
 
     int c = abs(param) + 1;
     if (dx == 0) { //a single point
-        cont.display->drawFragment(start);
+        cont.program->getFragmentShader()->r_shade(start, cont);
         return ;
     }
 
@@ -41,9 +40,7 @@ void Line::draw(Container & cont) const {
     Vertex a(start);
     for (int i = 0; i < c; ++i) {
         //apply fragment shading
-        Vertex v = cont.program->getFragmentShader()->r_shade(a);
-        //screen test
-        cont.display->drawFragment(v);
+        cont.program->getFragmentShader()->r_shade(a, cont);
         incr(a, delta);
     }
 }
@@ -56,7 +53,7 @@ void scanline(Container & cont, Vertex a, Vertex b) {
     float dx = b.attrs[0].x - a.attrs[0].x;
     if (dx < 0) dx = -dx;
     if (dx == 0) {
-        cont.display->drawFragment(cont.program->getFragmentShader()->r_shade(a));
+        cont.program->getFragmentShader()->r_shade(a, cont);
         return ;
     }
 
@@ -68,7 +65,7 @@ void scanline(Container & cont, Vertex a, Vertex b) {
     }
 
     for (int i = 0; i <= dx; ++i) {
-        cont.display->drawFragment(cont.program->getFragmentShader()->r_shade(a));
+        cont.program->getFragmentShader()->r_shade(a, cont);
         incr(a, delta);
     }
 }
