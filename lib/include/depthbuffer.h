@@ -56,6 +56,7 @@ struct DBuffer {
         }
         for (int i = 0; i < height; ++i) {
             for (int j = 0; j < width; ++j) {
+                //near is mapped to -1, far to 1
                 buffer[i][j] = 1e100;
             }
         }

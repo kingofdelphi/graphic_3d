@@ -1,6 +1,6 @@
 CXX = g++
 LDFLAGS = `pkg-config --libs sdl2`
-CXXFLAGS = `pkg-config --cflags sdl2` -std=c++11 -Ofast
+CXXFLAGS = `pkg-config --cflags sdl2` -std=c++11
 TARGET = bin/glib
 LIBSRCS = $(wildcard lib/src/*.cpp)
 LIBOBJS = $(addprefix lib/obj/,$(notdir $(LIBSRCS:.cpp=.o)))

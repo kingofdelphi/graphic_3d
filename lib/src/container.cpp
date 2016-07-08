@@ -28,7 +28,6 @@ Vertex clip(Vertex a, const Vertex & b) {
     float w = (w1 * z2 - z1 * w2) / (w2 - w1 + z2 - z1);
     //w1 != w2 is true here
     float f = (w - w1) / (w2 - w1);
-    glm::vec4 delta = b.attrs[0] - a.attrs[0];
     for (size_t i = 0; i < a.attrs.size(); ++i) {
         a.attrs[i] += f * (b.attrs[i] - a.attrs[i]);
     }

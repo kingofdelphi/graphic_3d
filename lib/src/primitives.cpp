@@ -24,8 +24,7 @@ void Line::draw(Container & cont) const {
         param = abs(dy);
     }
 
-    int c = abs(param) + 1;
-    if (dx == 0) { //a single point
+    if (param == 0) { //a single point
         cont.program->getFragmentShader()->r_shade(start, cont);
         return ;
     }
@@ -38,7 +37,7 @@ void Line::draw(Container & cont) const {
     }
 
     Vertex a(start);
-    for (int i = 0; i < c; ++i) {
+    for (int i = 0; i <= param; ++i) {
         //apply fragment shading
         cont.program->getFragmentShader()->r_shade(a, cont);
         incr(a, delta);
@@ -46,7 +45,6 @@ void Line::draw(Container & cont) const {
 }
 
 void scanline(Container & cont, Vertex a, Vertex b) {
-    //assert(a["position"].y == b["position"].y);
     a.attrs[0].x = int(a.attrs[0].x);
     b.attrs[0].x = int(b.attrs[0].x);
 
@@ -104,8 +102,6 @@ void Mesh::draw(Container & cont) const {
     }
 
     size_t N = p1.attrs.size();
-    assert(p1.attrs.size() == p2.attrs.size());
-    assert(p2.attrs.size() == p3.attrs.size());
     std::vector<glm::vec4> rdelta(N);
 
     for (size_t i = 0; i < N; ++i) {

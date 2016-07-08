@@ -17,7 +17,7 @@ void FragmentShader::r_shade(Vertex fragment, Container & cont) {
     int X = (int)(round(x)), Y = (int)(round(y));
 
     if (cont.zbuffer->inbounds(X, Y) && 
-            z + .00001 < cont.zbuffer->buffer[Y][X]) {
+            z - .02 < cont.zbuffer->buffer[Y][X]) {
         cont.zbuffer->buffer[Y][X] = z;
         cont.display->drawFragment(shade(fragment));
     }

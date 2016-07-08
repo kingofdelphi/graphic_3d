@@ -3,6 +3,8 @@
 #include "../include/objloader.h"
 #include "../include/cube.h"
 #include "../include/camera.h"
+#include "../include/sphere.h"
+#include "../include/config.h"
 
 #include <vector>
 #include <tuple>
@@ -10,19 +12,11 @@
 using namespace glm;
 using namespace std;
 
-Camera camera, light_cam;
-
-float tscale = 1;
-float asr = 1;
-int width = 640, height = 480;
-
-mat4x4 getPerspectiveMatrix() {
-    float l = -tscale, r = tscale, t = tscale, b = -tscale;
-    //l *= asr;
-    //r *= asr;
-    float n = 2, f = 100.0;
-    float m = 1;
-    mat4x4 pers = transpose(mat4x4(
+glm::mat4x4 getPerspectiveMatrix(float asr, float scale = 1.0) {
+    float l = -asr * scale, r = asr * scale, t = scale, b = -scale;
+    float n = 1.5, f = 100.0;
+    float m = 1; //this is the projection plane's depth
+    glm::mat4x4 pers = glm::transpose(glm::mat4x4(
                 2 * m / (r - l), 0, (r + l) / (r - l), 0,
                 0, 2 * m / (t - b), (t + b) / (t - b), 0,
                 0, 0, -(f + n) / (f - n), -2 * f * n / (f - n),
@@ -31,105 +25,10 @@ mat4x4 getPerspectiveMatrix() {
     return pers;
 }
 
-class ShadowVertexShader : public VertexShader {
-    public:
-        Vertex transform(size_t index) {
-            Vertex r;
-            auto & amap = program->attribute_map;
-            auto & unfms = program->uniforms_mat4;
-
-            //add attributes to the vertex
-            //currently: position must go first, color must go second, rest can be any
-            r.attrs.push_back(amap["position"]->at(index));
-            
-            //process attributes
-            r.attrs[0] = unfms["PVM"] * r.attrs[0];
-            return r;
-        }
-};
-
-class GouraudVertexShader : public VertexShader {
-    public:
-        Vertex transform(size_t index) {
-            Vertex r;
-            auto & amap = program->attribute_map;
-            auto & unfms = program->uniforms_mat4;
-            //add attributes to the vertex
-            //currently: position must go first, color must go second, rest can be any
-            r.attrs.push_back(amap["position"]->at(index));
-            r.attrs.push_back(amap["color"]->at(index));
-            r.attrs.push_back(amap["normal"]->at(index));
-
-            //process attributes
-            glm::vec4 world = unfms["mmodel"] * r.attrs[0];
-            r.attrs.push_back(unfms["world_to_light"] * world);//world space coords to light space homogeneous coords
-
-            r.attrs.push_back(world); //vertex world space position
-            
-            r.attrs[0] = unfms["PVM"] * r.attrs[0];
-            r.attrs[2] = unfms["mnormal"] * r.attrs[2];
-            
-            return r;
-        }
-};
-
-class PassThroughFragmentShader : public FragmentShader {
-    public:
-        Vertex shade(const Vertex & fragment) {
-            Vertex t(fragment);
-            return t;
-        }
-};
-
-class PhongFragmentShader : public FragmentShader {
-    public:
-        Vertex shade(const Vertex & fragment) {
-            Vertex r(fragment);
-            vec4 pos = r.attrs[3]; //oldpos
-            pos /= pos.w;
-            auto & dbuffer = program->dbuffer;
-            glm::vec2 dev = dbuffer->todevice(pos.x, pos.y);
-            pos.x = dev.x;
-            pos.y = dev.y;
-            int X = int(pos.x);
-            int Y = int(pos.y);
-            float bias = 0.0004;
-            float s = -1, e = 1;
-            float notshadow = 0;
-            for (int i = s; i <= e; ++i) {
-                for (int j = s; j <= e; ++j) {
-                    int AX = X + i, AY = Y + j;
-                    if (dbuffer->inbounds(AX, AY)) {
-                        if (pos.z - bias < dbuffer->get(AX, AY)) notshadow += 1;
-                    }
-                }
-            }
-            notshadow /= (e - s + 1) * (e - s  + 1); 
-            glm::vec4 color(0.5, 0.5, 0.5, 1.0);
-            glm::vec3 N = normalize(vec3(r.attrs[2]));
-            glm::vec3 ppos(r.attrs[4]);
-            //lighting calculations
-            for (auto & i : program->lights) {
-                glm::vec3 norm(glm::normalize(glm::vec3(i.pos) - ppos));
-                float f = dot(norm, N);
-                //f = 0.3;
-                if (f < 0) f = 0;
-                float Cd = 0.5;
-                vec4 scale = i.color * Cd * f;
-                color += notshadow * scale;
-                //color += vec4(0.5, 0.5, 0.5, 0) * notshadow;
-            }
-            r.attrs[1] *= color;
-            r.attrs[1].x = std::min(std::max(r.attrs[1].x, 0.f), 1.f);
-            r.attrs[1].y = std::min(std::max(r.attrs[1].y, 0.f), 1.f);
-            r.attrs[1].z = std::min(std::max(r.attrs[1].z, 0.f), 1.f);
-            return r;
-        }
-};
-
 Cube cb(-1, 0, -2.5, 1, 1, 1);
 Cube cb2(0, -.5/2, -2, .5, .5, .5);
 Object obj;
+Sphere sph(0, 0, 0, .4);
 
 void drawgrid(Container & cont) {
     auto & unfms = cont.program->uniforms_mat4;
@@ -194,15 +93,17 @@ void renderScene(Container & cont) {
     };
 
     vector<vec4> vertices = {
-        glm::vec4(-2, -.5, -1, 1),
+        glm::vec4(-2, -.5, 1, 1),
         glm::vec4(-2, -.5, -4, 1),
         glm::vec4(2, -.5, -4, 1),
-        glm::vec4(2, -.5, -1, 1),
+        glm::vec4(2, -.5, 1, 1),
     };
 
     auto & unfms = cont.program->uniforms_mat4;
     unfms["mmodel"] = glm::mat4x4(1.0);
     unfms["mnormal"] = glm::mat4x4(1.0);
+    unfms["PVM"] = unfms["PV"] * unfms["mmodel"];
+
     cont.program->attribPointer("position", &vertices);
     cont.program->attribPointer("color", &colors);
     cont.program->attribPointer("normal", &normals);
@@ -213,7 +114,8 @@ void renderScene(Container & cont) {
     cont.flush(); //execute requests
     //obj.draw(cont);
     //cb.push(cont);
-    cb2.push(cont);
+    //cb2.push(cont);
+    sph.push(cont);
     cont.flush(); //execute requests
     drawgrid(cont);
 }
@@ -230,15 +132,15 @@ void logic(Display & disp) {
     ShaderProgram scene_program;
     scene_program.init(vshader, fshader);
     
-    glm::mat4x4 pers = getPerspectiveMatrix();
+    glm::mat4x4 pers = getPerspectiveMatrix(1.0);
     scene_program.uniforms_mat4["pers"] = pers;
 
     ShaderProgram shadow_program;
     shadow_program.init(shadow_vshader, shadow_fshader);
 
-    shadow_program.uniforms_mat4["pers"] = pers;
+    shadow_program.uniforms_mat4["pers"] = getPerspectiveMatrix(1.0, 3);
 
-    DBuffer zscene(width, height);
+    DBuffer zscene(640, 480);
     DBuffer zshadow(800, 800);
 
     scene_program.dbuffer = &zshadow;
@@ -246,6 +148,11 @@ void logic(Display & disp) {
     cont.setDisplay(&disp);
     obj.load("suzanne.obj");
     bool vsw = false;
+
+    Camera camera, light_cam;
+
+    float asr = 1.0, tscale = 1.0;
+
     while (1) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) return ;
@@ -255,6 +162,7 @@ void logic(Display & disp) {
                     int h = e.window.data2;
                     zscene.resize(w, h);
                     asr = w * 1.0 / h;
+                    scene_program.uniforms_mat4["pers"] = getPerspectiveMatrix(asr);
                 }
             }  else if (e.type == SDL_KEYDOWN) {
                 if (e.key.keysym.sym == SDLK_SPACE) {
@@ -265,16 +173,19 @@ void logic(Display & disp) {
         //keystates
         //
         const Uint8 * keystate = SDL_GetKeyboardState(0);
-        glm::vec3 camvec(camera.getRotationMatrix() * glm::vec4(0, 0, -1, 0));
-        const float delta = .1;
         if (keystate[SDL_SCANCODE_Q]) {
         } else if (keystate[SDL_SCANCODE_E]) {
         } 
+
         if (keystate[SDL_SCANCODE_A]) {
-            camera.yrot += .05;
+            camera.yrot += .15;
         } else if (keystate[SDL_SCANCODE_D]) {
-            camera.yrot -= .05;
+            camera.yrot -= .15;
         }
+
+        glm::vec3 camvec(camera.getRotationMatrix() * glm::vec4(0, 0, -1, 0));
+
+        const float delta = .5;
 
         if (keystate[SDL_SCANCODE_W]) {
             camera.pos += delta * camvec;
@@ -284,9 +195,12 @@ void logic(Display & disp) {
 
         if (keystate[SDL_SCANCODE_Z]) {
             tscale -= .1;
+            scene_program.uniforms_mat4["pers"] = getPerspectiveMatrix(asr, tscale);
         } else if (keystate[SDL_SCANCODE_X]) {
             tscale += .1;
+            scene_program.uniforms_mat4["pers"] = getPerspectiveMatrix(asr, tscale);
         }
+
         //logic
         cb2.update();
         obj.update();
@@ -294,7 +208,6 @@ void logic(Display & disp) {
         Light lght(glm::vec4(0, 1, 2, 1), glm::vec4(1, 1, 1, 1.0));
         light_cam.pos = glm::vec3(lght.pos);
         light_cam.yrot = 0;
-        disp.clear();
         zshadow.clear();
         //render from light's point of view
         cont.setProgram(&shadow_program);
@@ -316,9 +229,7 @@ void logic(Display & disp) {
             cont.setZBuffer(&zscene);
             scene_program.uniforms_mat4["mview"] = camera.getViewMatrix();
             scene_program.uniforms_mat4["PV"] = scene_program.uniforms_mat4["pers"] * scene_program.uniforms_mat4["mview"];
-            scene_program.uniforms_mat4["to_light_space"] = pers * 
-                light_cam.getViewMatrix() * glm::inverse(camera.getViewMatrix());
-            scene_program.uniforms_mat4["world_to_light"] = pers * light_cam.getViewMatrix();
+            scene_program.uniforms_mat4["world_to_light"] = shadow_program.uniforms_mat4["PV"];
             renderScene(cont);
             //ready for rendering
         }
