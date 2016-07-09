@@ -81,7 +81,7 @@ class PhongFragmentShader : public FragmentShader {
                 glm::vec3 norm(glm::normalize(glm::vec3(i.pos) - ppos));
                 float f = dot(norm, N);
                 if (f < 0) f = 0;
-                float Cd = 0.9;
+                float Cd = 0.7;
                 glm::vec4 scale = i.color * Cd * f;
                 color += notshadow * scale;
                 //color += glm::vec4(0.5, 0.5, 0.5, 0) * notshadow;

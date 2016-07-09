@@ -14,18 +14,19 @@ struct Sphere {
     std::vector<glm::vec4> normals;
     std::vector<glm::vec4> colors;
     std::vector<glm::vec4> line_colors;
-    float x, y, z, radius;
+    glm::vec3 pos;
+    float radius;
     float rot;
     glm::mat4x4 model;
     std::vector<std::tuple<int, int, int>> meshes;
     std::vector<std::pair<int, int>> lines;
-    Sphere(float cx, float cy, float cz, float cradius) : 
-        x(cx), y(cy), z(cz), radius(cradius), rot(0) {
+    glm::vec3 vel;
+    Sphere(float cx, float cy, float cz, float cradius, glm::vec4 sphereColor, glm::vec3 velo) : 
+        pos(glm::vec3(cx, cy, cz)), radius(cradius), rot(0), vel(velo)  {
             std::vector<glm::vec3> vertices;
             int vert_steps = 20;
             int horz_steps = 20;
             int N = vert_steps + 1; //vertical vertices
-            glm::vec4 sphereColor(0, 1, 0, 0);
             glm::vec4 lcolor(1, 1, 1, 0);
 
             glm::mat4x4 vrot = glm::rotate(glm::mat4(1.0), -(float)M_PI / vert_steps, glm::vec3(1, 0, 0));
@@ -71,9 +72,9 @@ struct Sphere {
         glm::mat4x4 mrot = glm::rotate(glm::mat4(1.0), rot, glm::vec3(0, 1, 0));
 
         model = glm::transpose(glm::mat4x4(
-                    1, 0, 0, x,
-                    0, 1, 0, y,
-                    0, 0, 1, z,
+                    1, 0, 0, pos.x,
+                    0, 1, 0, pos.y,
+                    0, 0, 1, pos.z,
                     0, 0, 0, 1
                     ));
 
@@ -105,7 +106,8 @@ struct Sphere {
     }
 
     void update() {
-        rot += .05;
+        //rot += .05;
+        pos += vel;
     }
 
 };

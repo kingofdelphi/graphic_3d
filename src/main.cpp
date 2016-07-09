@@ -27,8 +27,39 @@ glm::mat4x4 getPerspectiveMatrix(float asr, float scale = 1.0) {
 
 Cube cb(-1, 0, -2.5, 1, 1, 1);
 Cube cb2(0, -.5/2, -2, .5, .5, .5);
+
 Object obj;
-Sphere sph(0, 0, 0, .4);
+
+const int N = 3;
+
+Sphere sph[N] = {
+    Sphere(0, 0, 0, .4, glm::vec4(1, 1, 0, 0), glm::vec3(0, 0, 0)),
+    Sphere(0, 0, 5, .2, glm::vec4(0, 1, 0, 0), glm::vec3(-0.108, 0, 0)),
+    Sphere(0, 0, 6.2, .1, glm::vec4(1, 1, 1, 0), glm::vec3(-0.193, 0.02, .00)),
+};
+
+void mv(Sphere & a, Sphere & b, float ma, float mb) {
+    glm::vec3 dir = a.pos - b.pos;
+    float distsq = glm::dot(dir, dir);
+    dir = dir / sqrt(distsq);
+    float G = 0.0005;
+    float force = G * ma * mb / distsq;
+    a.vel += force * -dir / ma;
+    b.vel += force * dir / mb;
+}
+
+void upd() {
+    float masses[N] = {120, 20, 3};
+    for (int i = 0; i < N; ++i) {
+        for (int j = i + 1; j < N; ++j) {
+            mv(sph[i], sph[j], masses[i], masses[j]);
+        }
+    }
+    //starts from 1, thus assumes that sun is fixed
+    for (int i = 1; i < N; ++i) {
+        sph[i].update();
+    }
+}
 
 void drawgrid(Container & cont) {
     auto & unfms = cont.program->uniforms_mat4;
@@ -115,7 +146,10 @@ void renderScene(Container & cont) {
     //obj.draw(cont);
     //cb.push(cont);
     //cb2.push(cont);
-    sph.push(cont);
+    
+    for (int i = 0; i < N; ++i) {
+        sph[i].push(cont);
+    }
     cont.flush(); //execute requests
     drawgrid(cont);
 }
@@ -174,18 +208,20 @@ void logic(Display & disp) {
         //
         const Uint8 * keystate = SDL_GetKeyboardState(0);
         if (keystate[SDL_SCANCODE_Q]) {
+            camera.xrot -= .05;
         } else if (keystate[SDL_SCANCODE_E]) {
+            camera.xrot += .05;
         } 
 
         if (keystate[SDL_SCANCODE_A]) {
-            camera.yrot += .15;
+            camera.yrot += .05;
         } else if (keystate[SDL_SCANCODE_D]) {
-            camera.yrot -= .15;
+            camera.yrot -= .05;
         }
 
         glm::vec3 camvec(camera.getRotationMatrix() * glm::vec4(0, 0, -1, 0));
 
-        const float delta = .5;
+        const float delta = .1;
 
         if (keystate[SDL_SCANCODE_W]) {
             camera.pos += delta * camvec;
@@ -194,7 +230,7 @@ void logic(Display & disp) {
         }
 
         if (keystate[SDL_SCANCODE_Z]) {
-            tscale -= .1;
+            tscale -= .1; //fov
             scene_program.uniforms_mat4["pers"] = getPerspectiveMatrix(asr, tscale);
         } else if (keystate[SDL_SCANCODE_X]) {
             tscale += .1;
@@ -204,6 +240,7 @@ void logic(Display & disp) {
         //logic
         cb2.update();
         obj.update();
+        upd();
         //rendering
         Light lght(glm::vec4(0, 1, 2, 1), glm::vec4(1, 1, 1, 1.0));
         light_cam.pos = glm::vec3(lght.pos);
